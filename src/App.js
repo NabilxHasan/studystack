@@ -30,8 +30,39 @@ const DEFAULT_TASKS = {
 };
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
-function getWeekKey(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()-d.getDay());return `${d.getFullYear()}-W${String(Math.ceil((((d-new Date(d.getFullYear(),0,1))/86400000)+1)/7)).padStart(2,"0")}`;}
-function getSundayForKey(key){const[yr,wStr]=key.split("-W");const year=parseInt(yr);const week=parseInt(wStr);const jan1=new Date(year,0,1);const d=new Date(jan1);d.setDate(jan1.getDate()+(week-1)*7-jan1.getDay());return d;}
+
+// ── RETRO SOUND ENGINE (synthesized, no files) ──
+let _actx=null;
+function ac(){ if(!_actx){try{_actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} return _actx; }
+let SOUND_ON = (()=>{try{return localStorage.getItem("sq_sound")!=="off";}catch(e){return true;}})();
+function setSoundOn(v){SOUND_ON=v;try{localStorage.setItem("sq_sound",v?"on":"off");}catch(e){}}
+function beep(freq,dur,type="square",vol=0.12,when=0){
+  if(!SOUND_ON)return;const ctx=ac();if(!ctx)return;
+  if(ctx.state==="suspended")ctx.resume();
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=type;o.frequency.value=freq;
+  o.connect(g);g.connect(ctx.destination);
+  const t=ctx.currentTime+when;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol,t+0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t);o.stop(t+dur+0.02);
+}
+const SFX={
+  tap:   ()=>beep(420,0.06,"square",0.07),
+  click: ()=>beep(660,0.05,"square",0.08),
+  done:  ()=>{beep(660,0.07,"square",0.11);beep(880,0.09,"square",0.11,0.07);beep(1320,0.12,"square",0.11,0.15);},
+  undo:  ()=>{beep(520,0.07,"square",0.09);beep(330,0.1,"square",0.09,0.06);},
+  add:   ()=>{beep(523,0.06,"triangle",0.1);beep(784,0.08,"triangle",0.1,0.06);},
+  del:   ()=>{beep(300,0.08,"sawtooth",0.09);beep(160,0.12,"sawtooth",0.09,0.07);},
+  theme: ()=>{beep(523,0.05,"sine",0.09);beep(659,0.05,"sine",0.09,0.05);beep(988,0.1,"sine",0.09,0.1);},
+  start: ()=>{beep(440,0.08,"square",0.11);beep(660,0.08,"square",0.11,0.08);beep(880,0.14,"square",0.11,0.16);},
+  stop:  ()=>{beep(880,0.08,"square",0.1);beep(587,0.1,"square",0.1,0.07);beep(392,0.16,"square",0.1,0.15);},
+  win:   ()=>{[523,659,784,1047,1319].forEach((f,i)=>beep(f,0.12,"square",0.1,i*0.08));},
+};
+
+function getWeekKey(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()-d.getDay());return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function getSundayForKey(key){const[y,m,day]=key.split("-").map(Number);return new Date(y,m-1,day);}
 function addDays(date,n){const d=new Date(date);d.setDate(d.getDate()+n);return d;}
 function formatShortDate(date){return date.toLocaleDateString("en-US",{month:"short",day:"numeric"});}
 function weekLabel(key){const sun=getSundayForKey(key);const sat=addDays(sun,6);return `${formatShortDate(sun)} – ${formatShortDate(sat)}`;}
@@ -310,6 +341,8 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .drop-in{animation:dropIn 0.22s ease both;}
 .fade-in{animation:fadeIn 0.35s ease both;}
 .check-pop{animation:checkPop 0.18s ease;}
+.sound-toggle{background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:14px;transition:all 0.15s;line-height:1;}
+.sound-toggle:hover{border-color:var(--bord2);transform:scale(1.1);}
 .streak-badge{display:inline-flex;align-items:center;gap:5px;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 11px;border-radius:20px;background:rgba(255,122,24,0.12);border:1px solid rgba(255,140,40,0.4);color:#ff9a3c;box-shadow:0 0 12px rgba(255,122,24,0.25);}
 .streak-badge .flame{font-size:13px;filter:drop-shadow(0 0 4px #ff7a18);}
 .streak-badge.cold{background:rgba(120,120,140,0.12);border-color:rgba(150,150,170,0.3);color:rgba(200,200,220,0.6);box-shadow:none;}
@@ -415,7 +448,7 @@ function StudyView({ studyLog, onSave }){
 
   useEffect(()=>()=>clearInterval(tickRef.current),[]);
 
-  function start(){
+  function start(){SFX.start();
     startRef.current=Date.now();
     setElapsed(0);setRunning(true);
     tickRef.current=setInterval(()=>{
@@ -426,7 +459,7 @@ function StudyView({ studyLog, onSave }){
     clearInterval(tickRef.current);
     const secs=Math.floor((Date.now()-startRef.current)/1000);
     setRunning(false);
-    if(secs>0){ onSave(secs); setCongrats(secs); }
+    if(secs>0){ onSave(secs); setCongrats(secs); SFX.win(); } else { SFX.stop(); }
     setElapsed(0);
   }
 
@@ -524,6 +557,8 @@ export default function App(){
   const[newLabels,setNewLabels]=useState({});const[newTypes,setNewTypes]=useState({});
   const[popId,setPopId]=useState(null);const[showModal,setShowModal]=useState(null);const[syncing,setSyncing]=useState(false);
   const[themeKey,setThemeKey]=useState(()=>localStorage.getItem("sq_theme")||"retrowave");
+  const[soundOn,setSoundOnState]=useState(SOUND_ON);
+  function toggleSound(){const v=!soundOn;setSoundOn(v);setSoundOnState(v);if(v)SFX.click();}
   const unsubRef=useRef(null);const saveRef=useRef(null);const loadedRef=useRef(false);const todayRowRef=useRef(null);
 
   useEffect(()=>{const vars=THEMES[themeKey].vars;const root=document.documentElement;Object.entries(vars).forEach(([k,v])=>root.style.setProperty(k,v));localStorage.setItem("sq_theme",themeKey);},[themeKey]);
@@ -572,7 +607,7 @@ export default function App(){
     }
   },[view]);
 
-  const weekKeys=Object.keys(allWeeks).sort((a,b)=>b.localeCompare(a));
+  const weekKeys=Object.keys(allWeeks).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort((a,b)=>b.localeCompare(a));
   const isPast=key=>key<currentWeekKey;const isCurrentWeek=activeWeek===currentWeekKey;const past=isPast(activeWeek);
   function dateOfDow(dow){const sun=getSundayForKey(activeWeek);return addDays(sun,dow).getDate();}
   function dayHasMissed(dow,wk){if(!isPast(wk))return false;const ts=(allWeeks[wk]||{})[dow]||[];return ts.length>0&&ts.some(t=>!t.done);}
@@ -596,12 +631,12 @@ export default function App(){
   }
   const streak=computeStreak();
   function updateDay(dow,fn){setAllWeeks(prev=>({...prev,[activeWeek]:{...(prev[activeWeek]||{}),[dow]:fn((prev[activeWeek]||{})[dow]||[])}}));}
-  function toggle(dow,id){if(past)return;setPopId(id);setTimeout(()=>setPopId(null),180);updateDay(dow,ts=>ts.map(t=>t.id===id?{...t,done:!t.done}:t));}
-  function del(dow,id){if(past)return;updateDay(dow,ts=>ts.filter(t=>t.id!==id));}
+  function toggle(dow,id){if(past)return;const cur=(activeTasks(dow).find(t=>t.id===id)||{}).done;cur?SFX.undo():SFX.done();setPopId(id);setTimeout(()=>setPopId(null),180);updateDay(dow,ts=>ts.map(t=>t.id===id?{...t,done:!t.done}:t));}
+  function del(dow,id){if(past)return;SFX.del();updateDay(dow,ts=>ts.filter(t=>t.id!==id));}
   function editLabel(dow,id,val){if(past)return;updateDay(dow,ts=>ts.map(t=>t.id===id?{...t,label:val}:t));}
   function toggleRepeat(dow,id){if(past)return;updateDay(dow,ts=>ts.map(t=>t.id===id?{...t,repeat:!t.repeat}:t));}
-  function addTask(dow){if(past)return;const label=(newLabels[dow]||"").trim();if(!label)return;const type=newTypes[dow]||"weekly";updateDay(dow,ts=>[...ts,{id:uid(),label,repeat:type==="weekly",done:false}]);setNewLabels(p=>({...p,[dow]:""}));}
-  function handleMultiAdd(label,days,repeat){days.forEach(dow=>updateDay(dow,ts=>[...ts,{id:uid(),label,repeat,done:false}]));}
+  function addTask(dow){if(past)return;const label=(newLabels[dow]||"").trim();if(!label)return;const type=newTypes[dow]||"weekly";SFX.add();updateDay(dow,ts=>[...ts,{id:uid(),label,repeat:type==="weekly",done:false}]);setNewLabels(p=>({...p,[dow]:""}));}
+  function handleMultiAdd(label,days,repeat){SFX.add();days.forEach(dow=>updateDay(dow,ts=>[...ts,{id:uid(),label,repeat,done:false}]));}
   function saveStudy(secs){const d=dateStr(new Date());setStudyLog(prev=>({...prev,[d]:(prev[d]||0)+secs}));}
 
   const sceneBlock=<><div className="scene"><Scene themeKey={themeKey}/></div><div className="retro-scanlines"/><div className="retro-vignette"/></>;
@@ -619,9 +654,10 @@ export default function App(){
         <style>{CSS}</style>{sceneBlock}
         <div className="controls-bar">
           <div style={{flex:1}}/>
+          <button className="sound-toggle" onClick={toggleSound} title={soundOn?"Sound on":"Sound off"}>{soundOn?"\uD83D\uDD0A":"\uD83D\uDD07"}</button>
           <div className="theme-wrap">
             {Object.entries(THEMES).map(([key,t])=>(
-              <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>setThemeKey(key)}>{t.icon}<span className="theme-tip">{t.name}</span></div>
+              <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>
             ))}
           </div>
           <button className="signout-btn" onClick={()=>signOut(auth)}>SIGN OUT</button>
@@ -637,7 +673,7 @@ export default function App(){
             </div>
           </div>
           <div className="home-cards">
-            <div className="home-card" onClick={()=>setView("tasks")}>
+            <div className="home-card" onClick={()=>{SFX.click();setView("tasks");}}>
               <div className="home-card-icon">📋</div>
               <div className="home-card-body">
                 <div className="home-card-title">TASKS</div>
@@ -646,7 +682,7 @@ export default function App(){
               </div>
               <div className="home-card-arrow">→</div>
             </div>
-            <div className="home-card" onClick={()=>setView("study")}>
+            <div className="home-card" onClick={()=>{SFX.click();setView("study");}}>
               <div className="home-card-icon">⏱️</div>
               <div className="home-card-body">
                 <div className="home-card-title">STUDY</div>
@@ -668,7 +704,7 @@ export default function App(){
         <style>{CSS}</style>{sceneBlock}
         <div className="hdr">
           <div className="hdr-left">
-            <button className="back-btn" onClick={()=>setView("home")}>←</button>
+            <button className="back-btn" onClick={()=>{SFX.tap();setView("home");}}>←</button>
             <div><div className="hdr-title">STUDY MODE</div><div className="hdr-sub">FOCUS TIMER</div></div>
           </div>
           <div className="hdr-right"><span className={`sync-badge${syncing?" syncing":""}`}>{syncing?"SYNCING...":"● SYNCED"}</span></div>
@@ -686,7 +722,7 @@ export default function App(){
       <div className="app">
         <div className="hdr">
           <div className="hdr-left">
-            <button className="back-btn" onClick={()=>setView("home")}>←</button>
+            <button className="back-btn" onClick={()=>{SFX.tap();setView("home");}}>←</button>
             <div>
               <div className="hdr-title">TASKS</div>
               <div className="hdr-sub">WEEKLY ROUTINE</div>
@@ -702,9 +738,10 @@ export default function App(){
 
         <div className="controls-bar">
           <div style={{flex:1}}/>
+          <button className="sound-toggle" onClick={toggleSound} title={soundOn?"Sound on":"Sound off"}>{soundOn?"\uD83D\uDD0A":"\uD83D\uDD07"}</button>
           <div className="theme-wrap">
             {Object.entries(THEMES).map(([key,t])=>(
-              <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>setThemeKey(key)}>{t.icon}<span className="theme-tip">{t.name}</span></div>
+              <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>
             ))}
           </div>
         </div>
