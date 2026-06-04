@@ -73,7 +73,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 @keyframes popIn{0%{opacity:0;transform:scale(0.8);}100%{opacity:1;transform:scale(1);}}
 
 .app{position:relative;z-index:2;min-height:100vh;max-width:540px;margin:0 auto;padding-bottom:80px;}
-.hdr{padding:24px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
+.hdr{padding:24px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:rgba(6,3,12,0.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
 .hdr-left{display:flex;align-items:center;gap:12px;min-width:0;}
 .back-btn{background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--accent);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
 .back-btn:hover{border-color:var(--accent);box-shadow:0 0 10px var(--accent);}
@@ -82,7 +82,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .hdr-user{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--accent2);letter-spacing:1px;margin-top:3px;}
 .hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
 
-.controls-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 20px;background:rgba(0,0,0,0.35);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+.controls-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 20px;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
 .theme-wrap{display:flex;gap:4px;}
 .theme-chip{background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:14px;transition:all 0.15s;position:relative;}
 .theme-chip:hover{border-color:var(--bord2);transform:scale(1.1);}
@@ -102,7 +102,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .home-cards{display:flex;flex-direction:column;gap:16px;}
 .home-card{
   border:1px solid var(--bord2);border-radius:20px;padding:28px 24px;cursor:pointer;
-  background:rgba(0,0,0,0.45);backdrop-filter:blur(14px);
+  background:rgba(10,6,20,0.58);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   transition:all 0.2s;position:relative;overflow:hidden;
   display:flex;align-items:center;gap:20px;
 }
@@ -118,7 +118,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 
 /* ── STUDY TIMER ── */
 .study-wrap{position:relative;z-index:2;max-width:540px;margin:0 auto;padding:30px 20px;}
-.timer-card{border:1px solid var(--bord2);border-radius:24px;padding:36px 24px;background:rgba(0,0,0,0.5);backdrop-filter:blur(16px);text-align:center;box-shadow:0 0 40px rgba(0,0,0,0.4);}
+.timer-card{border:1px solid var(--bord2);border-radius:24px;padding:36px 24px;background:rgba(10,6,20,0.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);text-align:center;box-shadow:0 0 40px rgba(0,0,0,0.4);}
 .timer-ring{width:230px;height:230px;margin:0 auto 28px;position:relative;display:flex;align-items:center;justify-content:center;}
 .timer-ring svg{position:absolute;inset:0;transform:rotate(-90deg);}
 .timer-ring-bg{fill:none;stroke:var(--border);stroke-width:6;}
@@ -133,13 +133,13 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .timer-btn.stop{background:linear-gradient(135deg,var(--red),#ff8866);color:#fff;box-shadow:0 0 20px var(--red);animation:pulseRing 1.8s infinite;}
 .timer-btn.stop:hover{filter:brightness(1.1);}
 .timer-hint{font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--dim);margin-top:18px;line-height:1.5;}
-.today-total{margin-top:20px;padding:14px;border-radius:12px;background:rgba(0,0,0,0.35);border:1px solid var(--border);}
+.today-total{margin-top:20px;padding:14px;border-radius:12px;background:rgba(8,4,16,0.7);border:1px solid var(--border);}
 .today-total-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);}
 .today-total-val{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:var(--accent);margin-top:4px;text-shadow:0 0 10px var(--accent);}
 
 /* congrats modal */
 .congrats-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);animation:fadeIn 0.3s ease;}
-.congrats{background:rgba(0,0,0,0.85);border:1px solid var(--accent);border-radius:24px;padding:38px 30px;text-align:center;max-width:380px;width:100%;box-shadow:0 0 60px var(--accent);animation:popIn 0.4s cubic-bezier(.23,1,.32,1);}
+.congrats{background:rgba(8,4,16,0.92);border:1px solid var(--accent);border-radius:24px;padding:38px 30px;text-align:center;max-width:380px;width:100%;box-shadow:0 0 60px var(--accent);animation:popIn 0.4s cubic-bezier(.23,1,.32,1);}
 .congrats-emoji{font-size:56px;margin-bottom:14px;animation:float 2.5s ease-in-out infinite;}
 .congrats-title{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;letter-spacing:2px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 14px var(--accent));}
 .congrats-msg{font-family:'Rajdhani',sans-serif;font-size:16px;color:var(--text);margin-top:14px;line-height:1.5;}
@@ -150,7 +150,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 /* ── STUDY HISTORY ── */
 .study-history{margin-top:24px;}
 .sh-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.sh-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(0,0,0,0.35);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.sh-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(8,4,16,0.7);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
 .sh-row.today{border-color:var(--bord2);box-shadow:0 0 10px rgba(0,0,0,0.3);}
 .sh-date{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px;width:90px;flex-shrink:0;}
 .sh-date.today{color:var(--accent);}
@@ -161,7 +161,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .sh-weektotal{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent3);text-align:right;margin-bottom:14px;}
 
 /* week nav + stack (tasks view) */
-.week-nav{display:flex;padding:12px 16px 0;overflow-x:auto;scrollbar-width:none;background:rgba(0,0,0,0.32);backdrop-filter:blur(8px);position:sticky;top:103px;z-index:40;}
+.week-nav{display:flex;padding:12px 16px 0;overflow-x:auto;scrollbar-width:none;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:sticky;top:103px;z-index:40;}
 .week-nav::-webkit-scrollbar{display:none;}
 .week-tab{flex-shrink:0;padding:8px 14px;background:none;border:none;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--dim);border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;}
 .week-tab:hover{color:var(--text);}
@@ -174,7 +174,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .badge-current{background:rgba(0,0,0,0.35);color:var(--accent);border:1px solid var(--bord2);}
 .badge-past{background:rgba(255,64,96,0.07);color:var(--red);border:1px solid rgba(255,64,96,0.2);}
 .stack{padding:10px 16px 0;display:flex;flex-direction:column;gap:10px;}
-.day-row{border-radius:14px;overflow:hidden;border:1px solid var(--border);background:rgba(0,0,0,0.42);backdrop-filter:blur(14px);transition:border-color 0.2s,box-shadow 0.2s;position:relative;}
+.day-row{border-radius:14px;overflow:hidden;border:1px solid var(--border);background:rgba(10,6,20,0.58);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:border-color 0.2s,box-shadow 0.2s;position:relative;}
 .day-row::before{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,rgba(255,255,255,0.035) 0%,transparent 55%);pointer-events:none;}
 .day-row.is-open{border-color:var(--bord2);box-shadow:0 0 22px rgba(0,0,0,0.45),0 0 14px var(--accent);}
 .day-row.is-today{border-color:var(--bord2);box-shadow:0 0 16px var(--accent);}
@@ -224,9 +224,9 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .edit-toggle:hover{color:var(--accent);border-color:var(--border);background:rgba(0,0,0,0.3);}
 .edit-toggle.active{color:var(--red);}
 .task-list{display:flex;flex-direction:column;gap:8px;}
-.task-item{display:flex;align-items:center;gap:13px;padding:14px 16px;background:rgba(0,0,0,0.32);border:1px solid var(--border);border-radius:10px;transition:all 0.15s;position:relative;overflow:hidden;}
+.task-item{display:flex;align-items:center;gap:13px;padding:14px 16px;background:rgba(10,6,20,0.5);border:1px solid var(--border);border-radius:10px;transition:all 0.15s;position:relative;overflow:hidden;}
 .task-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent),var(--accent2));opacity:0;transition:opacity 0.15s;box-shadow:0 0 8px var(--accent);}
-.task-item:hover{border-color:var(--bord2);background:rgba(0,0,0,0.46);}
+.task-item:hover{border-color:var(--bord2);background:rgba(10,6,20,0.62);}
 .task-item:hover::before{opacity:0.8;}
 .task-item.done{background:rgba(61,255,143,0.05);border-color:rgba(61,255,143,0.16);}
 .task-item.done::before{background:var(--green);opacity:1;box-shadow:0 0 8px var(--green);}
@@ -268,7 +268,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .auth-screen{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
 .auth-logo{font-family:'Orbitron',monospace;font-size:26px;font-weight:900;letter-spacing:4px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px var(--accent));margin-bottom:6px;text-align:center;animation:float 3s ease-in-out infinite;}
 .auth-sub{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:4px;margin-bottom:36px;text-align:center;}
-.auth-card{width:100%;max-width:390px;background:rgba(0,0,0,0.6);border:1px solid var(--bord2);border-radius:18px;padding:28px 24px;box-shadow:0 0 70px rgba(0,0,0,0.5),0 0 30px var(--accent);backdrop-filter:blur(16px);}
+.auth-card{width:100%;max-width:390px;background:rgba(10,6,20,0.66);border:1px solid var(--bord2);border-radius:18px;padding:28px 24px;box-shadow:0 0 70px rgba(0,0,0,0.5),0 0 30px var(--accent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);}
 .auth-tabs{display:flex;margin-bottom:24px;background:rgba(0,0,0,0.4);border-radius:10px;overflow:hidden;border:1px solid var(--border);}
 .auth-tab{flex:1;padding:11px;background:none;border:none;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--dim);transition:all 0.15s;}
 .auth-tab.active{background:rgba(0,0,0,0.5);color:var(--accent);text-shadow:0 0 8px var(--accent);}
@@ -281,7 +281,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .auth-btn:disabled{opacity:0.4;cursor:not-allowed;}
 .auth-error{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red);letter-spacing:1px;margin-top:10px;text-align:center;}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px);}
-.modal{background:rgba(0,0,0,0.85);border:1px solid var(--bord2);border-radius:18px;padding:26px;width:100%;max-width:410px;box-shadow:0 0 60px rgba(0,0,0,0.6),0 0 24px var(--accent);}
+.modal{background:rgba(8,4,16,0.93);border:1px solid var(--bord2);border-radius:18px;padding:26px;width:100%;max-width:410px;box-shadow:0 0 60px rgba(0,0,0,0.6),0 0 24px var(--accent);}
 .modal-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--accent);margin-bottom:20px;}
 .modal-field{margin-bottom:18px;}
 .modal-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:8px;display:block;}
@@ -310,6 +310,11 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .drop-in{animation:dropIn 0.22s ease both;}
 .fade-in{animation:fadeIn 0.35s ease both;}
 .check-pop{animation:checkPop 0.18s ease;}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 11px;border-radius:20px;background:rgba(255,122,24,0.12);border:1px solid rgba(255,140,40,0.4);color:#ff9a3c;box-shadow:0 0 12px rgba(255,122,24,0.25);}
+.streak-badge .flame{font-size:13px;filter:drop-shadow(0 0 4px #ff7a18);}
+.streak-badge.cold{background:rgba(120,120,140,0.12);border-color:rgba(150,150,170,0.3);color:rgba(200,200,220,0.6);box-shadow:none;}
+.streak-badge.cold .flame{filter:grayscale(1);opacity:0.5;}
+.home-streak{display:flex;justify-content:center;margin-top:14px;}
 .loading{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Orbitron',monospace;font-size:12px;letter-spacing:4px;color:var(--accent);}
 `;
 
@@ -519,23 +524,53 @@ export default function App(){
   const[newLabels,setNewLabels]=useState({});const[newTypes,setNewTypes]=useState({});
   const[popId,setPopId]=useState(null);const[showModal,setShowModal]=useState(null);const[syncing,setSyncing]=useState(false);
   const[themeKey,setThemeKey]=useState(()=>localStorage.getItem("sq_theme")||"retrowave");
-  const unsubRef=useRef(null);const saveRef=useRef(null);
+  const unsubRef=useRef(null);const saveRef=useRef(null);const loadedRef=useRef(false);const todayRowRef=useRef(null);
 
   useEffect(()=>{const vars=THEMES[themeKey].vars;const root=document.documentElement;Object.entries(vars).forEach(([k,v])=>root.style.setProperty(k,v));localStorage.setItem("sq_theme",themeKey);},[themeKey]);
   useEffect(()=>{const unsub=onAuthStateChanged(auth,u=>{setUser(u);setAuthReady(true);});return unsub;},[]);
+  // Subscribe to Firestore. We only mark "loaded" once real data arrives,
+  // and we NEVER write back until after that — this prevents the in-memory
+  // defaults from overwriting your saved cloud data on a fresh load.
   useEffect(()=>{
     if(unsubRef.current){unsubRef.current();unsubRef.current=null;}
-    if(!user)return;setSyncing(true);
+    loadedRef.current=false;
+    if(!user)return;
+    setSyncing(true);
     const ref=doc(db,"users",user.uid,"data","weeks");
     unsubRef.current=onSnapshot(ref,snap=>{
-      if(snap.exists()){const d=snap.data();if(d.allWeeks)setAllWeeks(d.allWeeks);if(d.studyLog)setStudyLog(d.studyLog);}
-      else setDoc(ref,{allWeeks:{[currentWeekKey]:DEFAULT_TASKS},studyLog:{}});
+      if(snap.exists()){
+        const d=snap.data();
+        let aw=d.allWeeks||{};
+        if(!aw[currentWeekKey]) aw={...aw,[currentWeekKey]:DEFAULT_TASKS};
+        setAllWeeks(aw);
+        setStudyLog(d.studyLog||{});
+      }else{
+        // brand new account — seed defaults once
+        setAllWeeks({[currentWeekKey]:DEFAULT_TASKS});
+        setStudyLog({});
+        setDoc(ref,{allWeeks:{[currentWeekKey]:DEFAULT_TASKS},studyLog:{}});
+      }
+      loadedRef.current=true;
       setSyncing(false);
     });
     return()=>{if(unsubRef.current)unsubRef.current();};
   },[user]);
-  useEffect(()=>{if(!user)return;clearTimeout(saveRef.current);setSyncing(true);saveRef.current=setTimeout(async()=>{try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks,studyLog});}catch(e){console.error(e);}setSyncing(false);},800);},[allWeeks,studyLog,user]);
-  useEffect(()=>{setAllWeeks(prev=>{if(prev[currentWeekKey])return prev;return{...prev,[currentWeekKey]:DEFAULT_TASKS};});},[]);
+  // Save back (debounced) ONLY after we've loaded real data at least once.
+  useEffect(()=>{
+    if(!user||!loadedRef.current)return;
+    clearTimeout(saveRef.current);setSyncing(true);
+    saveRef.current=setTimeout(async()=>{
+      try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks,studyLog});}catch(e){console.error(e);}
+      setSyncing(false);
+    },800);
+  },[allWeeks,studyLog,user]);
+  // When entering TASKS view, smoothly scroll today's card into view.
+  useEffect(()=>{
+    if(view==="tasks"){
+      const id=setTimeout(()=>{todayRowRef.current&&todayRowRef.current.scrollIntoView({behavior:"smooth",block:"center"});},150);
+      return()=>clearTimeout(id);
+    }
+  },[view]);
 
   const weekKeys=Object.keys(allWeeks).sort((a,b)=>b.localeCompare(a));
   const isPast=key=>key<currentWeekKey;const isCurrentWeek=activeWeek===currentWeekKey;const past=isPast(activeWeek);
@@ -543,6 +578,23 @@ export default function App(){
   function dayHasMissed(dow,wk){if(!isPast(wk))return false;const ts=(allWeeks[wk]||{})[dow]||[];return ts.length>0&&ts.some(t=>!t.done);}
   function weekHasMissed(key){if(!isPast(key))return false;for(let d=0;d<7;d++)if(dayHasMissed(d,key))return true;return false;}
   function activeTasks(dow){return(allWeeks[activeWeek]||{})[dow]||[];}
+  // ── STREAK: consecutive days (up to today) where all that day's tasks are done.
+  // Rest days (no tasks) are skipped, not broken. Today incomplete doesn't break it yet.
+  function tasksForDate(d){const wk=getWeekKey(d);return(allWeeks[wk]||{})[d.getDay()]||[];}
+  function computeStreak(){
+    let streak=0;const d=new Date();d.setHours(0,0,0,0);
+    const tt=tasksForDate(d);
+    if(tt.length>0&&tt.every(t=>t.done))streak++;
+    d.setDate(d.getDate()-1);
+    for(let i=0;i<400;i++){
+      const ts=tasksForDate(d);
+      if(ts.length===0){d.setDate(d.getDate()-1);continue;}
+      if(ts.every(t=>t.done))streak++;else break;
+      d.setDate(d.getDate()-1);
+    }
+    return streak;
+  }
+  const streak=computeStreak();
   function updateDay(dow,fn){setAllWeeks(prev=>({...prev,[activeWeek]:{...(prev[activeWeek]||{}),[dow]:fn((prev[activeWeek]||{})[dow]||[])}}));}
   function toggle(dow,id){if(past)return;setPopId(id);setTimeout(()=>setPopId(null),180);updateDay(dow,ts=>ts.map(t=>t.id===id?{...t,done:!t.done}:t));}
   function del(dow,id){if(past)return;updateDay(dow,ts=>ts.filter(t=>t.id!==id));}
@@ -578,6 +630,11 @@ export default function App(){
           <div className="home-hero">
             <div className="home-logo">STUDY STACK</div>
             <div className="home-sub">CHOOSE YOUR MODE</div>
+            <div className="home-streak">
+              <span className={`streak-badge${streak===0?" cold":""}`}>
+                <span className="flame">🔥</span>{streak===0?"NO STREAK — DO TODAY'S TASKS":`${streak} DAY STREAK`}
+              </span>
+            </div>
           </div>
           <div className="home-cards">
             <div className="home-card" onClick={()=>setView("tasks")}>
@@ -633,6 +690,7 @@ export default function App(){
             <div>
               <div className="hdr-title">TASKS</div>
               <div className="hdr-sub">WEEKLY ROUTINE</div>
+              <div style={{marginTop:6}}><span className={`streak-badge${streak===0?" cold":""}`}><span className="flame">🔥</span>{streak===0?"NO STREAK":`${streak} DAY`}</span></div>
               <div className="hdr-user">{user.email}</div>
             </div>
           </div>
@@ -664,7 +722,7 @@ export default function App(){
             const hasMissed=dayHasMissed(dow,activeWeek);const allDone=ts.length>0&&done===ts.length;
             const isOpen=openDay===dow;const isToday=dow===todayDow&&isCurrentWeek;const isEdit=editDay===dow&&!past;
             return(
-              <div key={dow} className={`day-row${isOpen?" is-open":""}${isToday?" is-today":""}${hasMissed?" is-missed":""}${allDone?" all-done":""}`}>
+              <div key={dow} ref={isToday?todayRowRef:null} className={`day-row${isOpen?" is-open":""}${isToday?" is-today":""}${hasMissed?" is-missed":""}${allDone?" all-done":""}`}>
                 <div className="day-header" onClick={()=>setOpenDay(isOpen?null:dow)}>
                   <div style={{display:"flex",alignItems:"center",gap:14,flex:1,minWidth:0}}>
                     <div className="day-num-box"><span className="day-abbr">{DAYS_SHORT[dow]}</span><span className="day-num-val">{dateOfDow(dow)}</span></div>
