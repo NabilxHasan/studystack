@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, setDoc, onSnapshot } from "firebase/firestore";
-
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "firebase/firestore";
 const firebaseConfig = {
   apiKey: "AIzaSyAjh6UHtqNWS2d4vsot1-WicwgevBzUtpg",
   authDomain: "studyquest-e3bc8.firebaseapp.com",
@@ -15,6 +14,9 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+enableIndexedDbPersistence(db).catch((err) => {
+  console.log("Offline persistence error:", err.code);
+});
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const DAYS_SHORT = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
