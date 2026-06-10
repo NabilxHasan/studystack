@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence, terminate, clearIndexedDbPersistence } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAjh6UHtqNWS2d4vsot1-WicwgevBzUtpg",
@@ -15,6 +15,12 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 enableIndexedDbPersistence(db).catch(()=>{});
+async function cleanSignOut(){
+  try{ await signOut(auth); }catch(e){}
+  // wipe local cache so another account on this device can't inherit it
+  try{ await terminate(db); await clearIndexedDbPersistence(db); }catch(e){}
+  window.location.reload();
+}
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const DAYS_SHORT = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
@@ -90,7 +96,8 @@ const THEMES = {
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--text);min-height:100vh;transition:background 0.6s;}
+html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--text);min-height:100vh;transition:background 0.6s;overflow-x:hidden;width:100%;}
+*{max-width:100%;}
 .scene{position:fixed;inset:0;z-index:0;overflow:hidden;}
 .scene-canvas{position:absolute;inset:0;width:100%;height:100%;}
 .retro-scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);}
@@ -103,7 +110,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 @keyframes spinSlow{from{transform:rotate(0);}to{transform:rotate(360deg);}}
 @keyframes popIn{0%{opacity:0;transform:scale(0.8);}100%{opacity:1;transform:scale(1);}}
 
-.app{position:relative;z-index:2;min-height:100vh;max-width:540px;margin:0 auto;padding-bottom:80px;}
+.app{position:relative;z-index:2;min-height:100vh;max-width:540px;width:100%;margin:0 auto;padding-bottom:80px;overflow-x:hidden;}
 .hdr{padding:24px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:rgba(6,3,12,0.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
 .hdr-left{display:flex;align-items:center;gap:12px;min-width:0;}
 .back-btn{background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--accent);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
@@ -212,7 +219,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .day-row.is-missed{border-color:rgba(255,64,96,0.22);}
 .day-row.is-missed.is-open{border-color:rgba(255,64,96,0.5);}
 .day-row.all-done{border-color:rgba(61,255,143,0.25);box-shadow:0 0 12px rgba(61,255,143,0.15);}
-.day-header{display:flex;align-items:center;padding:16px 18px;cursor:pointer;gap:14px;user-select:none;}
+.day-header{display:flex;align-items:center;padding:16px 16px;cursor:pointer;gap:12px;user-select:none;overflow:hidden;}
 .day-num-box{width:52px;height:52px;flex-shrink:0;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:all 0.2s;}
 .is-today .day-num-box{background:rgba(0,0,0,0.55);border-color:var(--accent);box-shadow:0 0 14px var(--accent),inset 0 0 10px rgba(255,255,255,0.04);}
 .is-open .day-num-box{border-color:var(--accent2);}
@@ -255,7 +262,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .edit-toggle:hover{color:var(--accent);border-color:var(--border);background:rgba(0,0,0,0.3);}
 .edit-toggle.active{color:var(--red);}
 .task-list{display:flex;flex-direction:column;gap:8px;}
-.task-item{display:flex;align-items:center;gap:13px;padding:14px 16px;background:rgba(10,6,20,0.5);border:1px solid var(--border);border-radius:10px;transition:all 0.15s;position:relative;overflow:hidden;}
+.task-item{display:flex;align-items:center;gap:10px;padding:14px 14px;background:rgba(10,6,20,0.5);border:1px solid var(--border);border-radius:10px;transition:all 0.15s;position:relative;overflow:hidden;flex-wrap:wrap;}
 .task-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent),var(--accent2));opacity:0;transition:opacity 0.15s;box-shadow:0 0 8px var(--accent);}
 .task-item:hover{border-color:var(--bord2);background:rgba(10,6,20,0.62);}
 .task-item:hover::before{opacity:0.8;}
@@ -270,14 +277,14 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .task-label{flex:1;min-width:0;font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:600;color:var(--text);line-height:1.3;letter-spacing:0.5px;}
 .task-item.done .task-label{color:var(--dim);text-decoration:line-through;opacity:0.5;}
 .task-item.task-missed .task-label{color:rgba(255,120,140,0.78);}
-.task-edit-input{flex:1;background:rgba(0,0,0,0.45);border:1px solid var(--bord2);border-radius:6px;padding:6px 10px;font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:600;color:var(--text);outline:none;letter-spacing:0.5px;}
+.task-edit-input{flex:1;min-width:0;background:rgba(0,0,0,0.45);border:1px solid var(--bord2);border-radius:6px;padding:6px 10px;font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:600;color:var(--text);outline:none;letter-spacing:0.5px;}
 .task-edit-input:focus{border-color:var(--accent);}
-.task-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.task-right{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto;}
 .type-pill{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;border:1px solid;cursor:pointer;background:none;transition:all 0.15s;white-space:nowrap;}
 .type-pill.weekly{color:var(--accent2);border-color:var(--border);}
 .type-pill.once{color:var(--yellow);border-color:rgba(255,216,77,0.25);}
 .type-pill.missed-pill{color:var(--red);border-color:rgba(255,64,96,0.3);cursor:default;}
-.del-btn{background:none;border:none;cursor:pointer;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:14px;transition:all 0.15s;}
+.del-btn{background:rgba(255,64,96,0.12);border:1px solid rgba(255,64,96,0.3);cursor:pointer;width:34px;height:34px;flex-shrink:0;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:14px;transition:all 0.15s;}
 .del-btn:hover{color:var(--red);background:rgba(255,64,96,0.1);}
 .add-bar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
 .add-input{flex:1;min-width:120px;background:rgba(0,0,0,0.42);border:1px solid var(--border);border-radius:10px;padding:13px 16px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;color:var(--text);outline:none;transition:all 0.15s;}
@@ -559,7 +566,7 @@ export default function App(){
   const[themeKey,setThemeKey]=useState(()=>localStorage.getItem("sq_theme")||"retrowave");
   const[soundOn,setSoundOnState]=useState(SOUND_ON);
   function toggleSound(){const v=!soundOn;setSoundOn(v);setSoundOnState(v);if(v)SFX.click();}
-  const unsubRef=useRef(null);const saveRef=useRef(null);const loadedRef=useRef(false);const todayRowRef=useRef(null);
+  const unsubRef=useRef(null);const saveRef=useRef(null);const loadedForUid=useRef(null);const todayRowRef=useRef(null);
 
   useEffect(()=>{const vars=THEMES[themeKey].vars;const root=document.documentElement;Object.entries(vars).forEach(([k,v])=>root.style.setProperty(k,v));localStorage.setItem("sq_theme",themeKey);},[themeKey]);
   useEffect(()=>{const unsub=onAuthStateChanged(auth,u=>{setUser(u);setAuthReady(true);});return unsub;},[]);
@@ -568,7 +575,7 @@ export default function App(){
   // defaults from overwriting your saved cloud data on a fresh load.
   useEffect(()=>{
     if(unsubRef.current){unsubRef.current();unsubRef.current=null;}
-    loadedRef.current=false;
+    loadedForUid.current=null;
     if(!user)return;
     setSyncing(true);
     const ref=doc(db,"users",user.uid,"data","weeks");
@@ -585,14 +592,14 @@ export default function App(){
         setStudyLog({});
         setDoc(ref,{allWeeks:{[currentWeekKey]:DEFAULT_TASKS},studyLog:{}});
       }
-      loadedRef.current=true;
+      loadedForUid.current=user.uid;
       setSyncing(false);
     });
     return()=>{if(unsubRef.current)unsubRef.current();};
   },[user]);
   // Save back (debounced) ONLY after we've loaded real data at least once.
   useEffect(()=>{
-    if(!user||!loadedRef.current)return;
+    if(!user||loadedForUid.current!==user.uid)return;
     clearTimeout(saveRef.current);setSyncing(true);
     saveRef.current=setTimeout(async()=>{
       try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks,studyLog});}catch(e){console.error(e);}
@@ -660,7 +667,7 @@ export default function App(){
               <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>
             ))}
           </div>
-          <button className="signout-btn" onClick={()=>signOut(auth)}>SIGN OUT</button>
+          <button className="signout-btn" onClick={cleanSignOut}>SIGN OUT</button>
         </div>
         <div className="home">
           <div className="home-hero">
@@ -732,7 +739,7 @@ export default function App(){
           </div>
           <div className="hdr-right">
             <span className={`sync-badge${syncing?" syncing":""}`}>{syncing?"SYNCING...":"● SYNCED"}</span>
-            <button className="signout-btn" onClick={()=>signOut(auth)}>SIGN OUT</button>
+            <button className="signout-btn" onClick={cleanSignOut}>SIGN OUT</button>
           </div>
         </div>
 
