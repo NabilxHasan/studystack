@@ -617,12 +617,13 @@ export default function App(){
     if(!user||loadedForUid.current!==user.uid)return;
     clearTimeout(saveRef.current);setSyncing(true);
     saveRef.current=setTimeout(async()=>{
-      // Prune weeks that are completely empty (visited but never used) to avoid
-      // unbounded storage growth — but always keep the current week.
+      // Prune ONLY weeks that contain zero tasks across all 7 days (truly unused).
+      // A carry-forward week has your weekly tasks, so it is kept. Never prune the
+      // current or the currently-active week.
       const pruned={};
       for(const[k,wk]of Object.entries(allWeeks)){
         const hasAny=Object.values(wk||{}).some(arr=>Array.isArray(arr)&&arr.length>0);
-        if(k===currentWeekKey||hasAny) pruned[k]=wk;
+        if(k===currentWeekKey||k===activeWeek||hasAny) pruned[k]=wk;
       }
       try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks:pruned,studyLog});}catch(e){console.error(e);}
       setSyncing(false);
@@ -642,20 +643,19 @@ export default function App(){
   function dayHasMissed(dow,wk){if(!isPast(wk))return false;const ts=(allWeeks[wk]||{})[dow]||[];return ts.length>0&&ts.some(t=>!t.done);}
   function weekHasMissed(key){if(!isPast(key))return false;for(let d=0;d<7;d++)if(dayHasMissed(d,key))return true;return false;}
   function activeTasks(dow){return(allWeeks[activeWeek]||{})[dow]||[];}
-  // Find the nearest existing week on/before a given key to use as the template source.
-  function latestTemplateFor(key){
-    const keys=Object.keys(allWeeks).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
-    let src=null;
-    for(const k of keys){ if(k<=key) src=k; }       // closest past/equal week
-    if(!src && keys.length) src=keys[0];             // else earliest we have
-    return src?allWeeks[src]:DEFAULT_TASKS;
-  }
-  // Create a week if missing, carrying weekly tasks forward, then go to it.
+  // Create the week if missing (carrying weekly tasks forward from the most recent
+  // existing week), then navigate to it. Template is resolved inside the state
+  // updater so it always uses the freshest data, never a stale closure.
   function goToWeek(key){
-    if(!allWeeks[key]){
-      const tmpl=weekFromTemplate(latestTemplateFor(key));
-      setAllWeeks(prev=>({...prev,[key]:tmpl}));
-    }
+    setAllWeeks(prev=>{
+      if(prev[key]) return prev;
+      const keys=Object.keys(prev).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+      let srcKey=null;
+      for(const k of keys){ if(k<=key) srcKey=k; }   // nearest past/equal
+      if(!srcKey && keys.length) srcKey=keys[keys.length-1]; // else most recent
+      const srcWeek=srcKey?prev[srcKey]:DEFAULT_TASKS;
+      return {...prev,[key]:weekFromTemplate(srcWeek)};
+    });
     setActiveWeek(key);
     setOpenDay(key===currentWeekKey?todayDow:0);
     setEditDay(null);
@@ -663,21 +663,25 @@ export default function App(){
   }
   function stepWeek(deltaWeeks){
     const sun=getSundayForKey(activeWeek);
-    const t=addDays(sun,deltaWeeks*7);
-    goToWeek(getWeekKey(t));
+    const target=addDays(sun,deltaWeeks*7);
+    goToWeek(getWeekKey(target));
   }
   // ── STREAK: consecutive days (up to today) where all that day's tasks are done.
   // Rest days (no tasks) are skipped, not broken. Today incomplete doesn't break it yet.
   function tasksForDate(d){const wk=getWeekKey(d);return(allWeeks[wk]||{})[d.getDay()]||[];}
   function computeStreak(){
-    let streak=0;const d=new Date();d.setHours(0,0,0,0);
-    const tt=tasksForDate(d);
-    if(tt.length>0&&tt.every(t=>t.done))streak++;
-    d.setDate(d.getDate()-1);
+    let streak=0;
+    const today=new Date();today.setHours(0,0,0,0);
+    // Count today only if it actually has tasks AND every one is done.
+    const tt=tasksForDate(today);
+    if(tt.length>0 && tt.every(t=>t.done)) streak++;
+    // Walk strictly into the PAST. A past day with tasks that are not all done
+    // BREAKS the streak. A past day with genuinely no tasks is a rest day (skip).
+    const d=new Date(today);d.setDate(d.getDate()-1);
     for(let i=0;i<400;i++){
       const ts=tasksForDate(d);
-      if(ts.length===0){d.setDate(d.getDate()-1);continue;}
-      if(ts.every(t=>t.done))streak++;else break;
+      if(ts.length===0){d.setDate(d.getDate()-1);continue;} // rest day, skip
+      if(ts.every(t=>t.done)) streak++; else break;          // incomplete -> stop
       d.setDate(d.getDate()-1);
     }
     return streak;
