@@ -69,6 +69,17 @@ const SFX={
 
 function getWeekKey(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()-d.getDay());return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function getSundayForKey(key){const[y,m,day]=key.split("-").map(Number);return new Date(y,m-1,day);}
+
+// Build a fresh week template: carry forward only WEEKLY (repeat) tasks from a
+// source week, reset to "not done". ONE-TIME tasks do NOT carry over.
+function weekFromTemplate(srcWeek){
+  const out={};
+  for(let dow=0;dow<7;dow++){
+    const srcDay=(srcWeek&&srcWeek[dow])||[];
+    out[dow]=srcDay.filter(t=>t.repeat).map(t=>({id:Math.random().toString(36).slice(2,9),label:t.label,repeat:true,done:false}));
+  }
+  return out;
+}
 function addDays(date,n){const d=new Date(date);d.setDate(d.getDate()+n);return d;}
 function formatShortDate(date){return date.toLocaleDateString("en-US",{month:"short",day:"numeric"});}
 function weekLabel(key){const sun=getSundayForKey(key);const sat=addDays(sun,6);return `${formatShortDate(sun)} – ${formatShortDate(sat)}`;}
@@ -201,6 +212,10 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 /* week nav + stack (tasks view) */
 .week-nav{display:flex;padding:12px 16px 0;overflow-x:auto;scrollbar-width:none;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:sticky;top:103px;z-index:40;}
 .week-nav::-webkit-scrollbar{display:none;}
+.week-step{flex-shrink:0;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:7px;width:30px;height:30px;margin:2px 4px;cursor:pointer;color:var(--accent);font-size:12px;transition:all 0.15s;}
+.week-step:hover{border-color:var(--accent);box-shadow:0 0 8px var(--accent);}
+.week-step.today-jump{color:var(--accent3);}
+.badge-future{background:rgba(0,0,0,0.35);color:var(--accent3);border:1px solid var(--accent3);}
 .week-tab{flex-shrink:0;padding:8px 14px;background:none;border:none;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--dim);border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;}
 .week-tab:hover{color:var(--text);}
 .week-tab.active{color:var(--accent);border-bottom-color:var(--accent);text-shadow:0 0 8px var(--accent);}
@@ -563,7 +578,7 @@ export default function App(){
   const[openDay,setOpenDay]=useState(todayDow);const[editDay,setEditDay]=useState(null);
   const[newLabels,setNewLabels]=useState({});const[newTypes,setNewTypes]=useState({});
   const[popId,setPopId]=useState(null);const[showModal,setShowModal]=useState(null);const[syncing,setSyncing]=useState(false);
-  const[themeKey,setThemeKey]=useState(()=>localStorage.getItem("sq_theme")||"retrowave");
+  const[themeKey,setThemeKey]=useState(()=>{const t=localStorage.getItem("sq_theme");return THEMES[t]?t:"retrowave";});
   const[soundOn,setSoundOnState]=useState(SOUND_ON);
   function toggleSound(){const v=!soundOn;setSoundOn(v);setSoundOnState(v);if(v)SFX.click();}
   const unsubRef=useRef(null);const saveRef=useRef(null);const loadedForUid=useRef(null);const todayRowRef=useRef(null);
@@ -583,7 +598,7 @@ export default function App(){
       if(snap.exists()){
         const d=snap.data();
         let aw=d.allWeeks||{};
-        if(!aw[currentWeekKey]) aw={...aw,[currentWeekKey]:DEFAULT_TASKS};
+        if(!aw[currentWeekKey]) aw={...aw,[currentWeekKey]:weekFromTemplate(Object.keys(aw).length?aw[Object.keys(aw).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().pop()]:DEFAULT_TASKS)};
         setAllWeeks(aw);
         setStudyLog(d.studyLog||{});
       }else{
@@ -602,7 +617,14 @@ export default function App(){
     if(!user||loadedForUid.current!==user.uid)return;
     clearTimeout(saveRef.current);setSyncing(true);
     saveRef.current=setTimeout(async()=>{
-      try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks,studyLog});}catch(e){console.error(e);}
+      // Prune weeks that are completely empty (visited but never used) to avoid
+      // unbounded storage growth — but always keep the current week.
+      const pruned={};
+      for(const[k,wk]of Object.entries(allWeeks)){
+        const hasAny=Object.values(wk||{}).some(arr=>Array.isArray(arr)&&arr.length>0);
+        if(k===currentWeekKey||hasAny) pruned[k]=wk;
+      }
+      try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks:pruned,studyLog});}catch(e){console.error(e);}
       setSyncing(false);
     },800);
   },[allWeeks,studyLog,user]);
@@ -620,6 +642,30 @@ export default function App(){
   function dayHasMissed(dow,wk){if(!isPast(wk))return false;const ts=(allWeeks[wk]||{})[dow]||[];return ts.length>0&&ts.some(t=>!t.done);}
   function weekHasMissed(key){if(!isPast(key))return false;for(let d=0;d<7;d++)if(dayHasMissed(d,key))return true;return false;}
   function activeTasks(dow){return(allWeeks[activeWeek]||{})[dow]||[];}
+  // Find the nearest existing week on/before a given key to use as the template source.
+  function latestTemplateFor(key){
+    const keys=Object.keys(allWeeks).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+    let src=null;
+    for(const k of keys){ if(k<=key) src=k; }       // closest past/equal week
+    if(!src && keys.length) src=keys[0];             // else earliest we have
+    return src?allWeeks[src]:DEFAULT_TASKS;
+  }
+  // Create a week if missing, carrying weekly tasks forward, then go to it.
+  function goToWeek(key){
+    if(!allWeeks[key]){
+      const tmpl=weekFromTemplate(latestTemplateFor(key));
+      setAllWeeks(prev=>({...prev,[key]:tmpl}));
+    }
+    setActiveWeek(key);
+    setOpenDay(key===currentWeekKey?todayDow:0);
+    setEditDay(null);
+    SFX.click();
+  }
+  function stepWeek(deltaWeeks){
+    const sun=getSundayForKey(activeWeek);
+    const t=addDays(sun,deltaWeeks*7);
+    goToWeek(getWeekKey(t));
+  }
   // ── STREAK: consecutive days (up to today) where all that day's tasks are done.
   // Rest days (no tasks) are skipped, not broken. Today incomplete doesn't break it yet.
   function tasksForDate(d){const wk=getWeekKey(d);return(allWeeks[wk]||{})[d.getDay()]||[];}
@@ -754,11 +800,14 @@ export default function App(){
         </div>
 
         <div className="week-nav">
+          <button className="week-step" onClick={()=>stepWeek(-1)} title="Previous week">◀</button>
           {weekKeys.map(key=>{const missed=weekHasMissed(key);const isCur=key===currentWeekKey;const isAct=key===activeWeek;
-            return(<button key={key} className={`week-tab${isAct?" active":""}${missed?" has-missed":""}`} onClick={()=>{setActiveWeek(key);setOpenDay(isCur?todayDow:null);setEditDay(null);}}>{isCur?"THIS WEEK":weekLabel(key)}{missed?" ⚠":""}</button>);})}
+            return(<button key={key} className={`week-tab${isAct?" active":""}${missed?" has-missed":""}`} onClick={()=>goToWeek(key)}>{isCur?"THIS WEEK":weekLabel(key)}{missed?" ⚠":""}</button>);})}
+          <button className="week-step" onClick={()=>stepWeek(1)} title="Next week">▶</button>
+          {activeWeek!==currentWeekKey&&<button className="week-step today-jump" onClick={()=>goToWeek(currentWeekKey)} title="Jump to this week">⌂</button>}
         </div>
         <div className="week-nav-border"/>
-        <div className="week-label">{weekLabel(activeWeek)}<span className={`week-label-badge ${isCurrentWeek?"badge-current":"badge-past"}`}>{isCurrentWeek?"CURRENT":"PAST — READ ONLY"}</span></div>
+        <div className="week-label">{weekLabel(activeWeek)}<span className={`week-label-badge ${isCurrentWeek?"badge-current":isPast(activeWeek)?"badge-past":"badge-future"}`}>{isCurrentWeek?"CURRENT":isPast(activeWeek)?"PAST — READ ONLY":"UPCOMING"}</span></div>
 
         <div className="stack">
           {[0,1,2,3,4,5,6].map(dow=>{
@@ -784,7 +833,7 @@ export default function App(){
                 <div className={`day-body${isOpen?" open":""}`}>
                   <div className="day-body-inner">
                     <div className="day-edit-bar">
-                      {!past?(<button className={`edit-toggle${isEdit?" active":""}`} onClick={e=>{e.stopPropagation();setEditDay(isEdit?null:dow);}}>{isEdit?"✕ DONE":"✎ EDIT"}</button>):(<span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:9,letterSpacing:2,color:"rgba(255,64,96,0.5)"}}>{hasMissed?"⚠ TASKS MISSED":"READ ONLY"}</span>)}
+                      {!past?(<button className={`edit-toggle${isEdit?" active":""}`} onClick={e=>{e.stopPropagation();if(isEdit){updateDay(dow,ts=>ts.filter(t=>t.label.trim()!==""));}setEditDay(isEdit?null:dow);}}>{isEdit?"✕ DONE":"✎ EDIT"}</button>):(<span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:9,letterSpacing:2,color:"rgba(255,64,96,0.5)"}}>{hasMissed?"⚠ TASKS MISSED":"READ ONLY"}</span>)}
                     </div>
                     {ts.length>0&&<div className="mini-prog"><div className={`mini-prog-fill${hasMissed?" missed":""}`} style={{width:`${pct}%`}}/></div>}
                     <div className="task-list drop-in">
