@@ -210,8 +210,9 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .sh-weektotal{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent3);text-align:right;margin-bottom:14px;}
 
 /* week nav + stack (tasks view) */
-.week-nav{display:flex;padding:12px 16px 0;overflow-x:auto;scrollbar-width:none;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:sticky;top:103px;z-index:40;}
-.week-nav::-webkit-scrollbar{display:none;}
+.week-nav{display:flex;align-items:center;gap:2px;padding:12px 16px 0;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:sticky;top:103px;z-index:40;}
+.week-tabs{display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;scroll-behavior:smooth;}
+.week-tabs::-webkit-scrollbar{display:none;}
 .week-step{flex-shrink:0;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:7px;width:30px;height:30px;margin:2px 4px;cursor:pointer;color:var(--accent);font-size:12px;transition:all 0.15s;}
 .week-step:hover{border-color:var(--accent);box-shadow:0 0 8px var(--accent);}
 .week-step.today-jump{color:var(--accent3);}
@@ -582,7 +583,7 @@ export default function App(){
   const[themeKey,setThemeKey]=useState(()=>{const t=localStorage.getItem("sq_theme");return THEMES[t]?t:"retrowave";});
   const[soundOn,setSoundOnState]=useState(SOUND_ON);
   function toggleSound(){const v=!soundOn;setSoundOn(v);setSoundOnState(v);if(v)SFX.click();}
-  const unsubRef=useRef(null);const saveRef=useRef(null);const loadedForUid=useRef(null);const todayRowRef=useRef(null);
+  const unsubRef=useRef(null);const saveRef=useRef(null);const loadedForUid=useRef(null);const todayRowRef=useRef(null);const activeTabRef=useRef(null);
 
   useEffect(()=>{const vars=THEMES[themeKey].vars;const root=document.documentElement;Object.entries(vars).forEach(([k,v])=>root.style.setProperty(k,v));localStorage.setItem("sq_theme",themeKey);},[themeKey]);
   useEffect(()=>{const unsub=onAuthStateChanged(auth,u=>{setUser(u);setAuthReady(true);});return unsub;},[]);
@@ -613,7 +614,7 @@ export default function App(){
       setSyncing(false);
     });
     return()=>{if(unsubRef.current)unsubRef.current();};
-  },[user]);
+  },[user,currentWeekKey]);
   // Save back (debounced) ONLY after we've loaded real data at least once.
   useEffect(()=>{
     if(!user||loadedForUid.current!==user.uid)return;
@@ -630,7 +631,7 @@ export default function App(){
       try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks:pruned,studyLog,keptWeeks});}catch(e){console.error(e);}
       setSyncing(false);
     },800);
-  },[allWeeks,studyLog,keptWeeks,user]);
+  },[allWeeks,studyLog,keptWeeks,user,activeWeek,currentWeekKey]);
   // When entering TASKS view, smoothly scroll today's card into view.
   useEffect(()=>{
     if(view==="tasks"){
@@ -638,8 +639,17 @@ export default function App(){
       return()=>clearTimeout(id);
     }
   },[view]);
+  // Keep the active week's tab centered in the (scrollable) week nav, so after
+  // stepping forward/back you can always see where you are.
+  useEffect(()=>{
+    if(view!=="tasks")return;
+    const id=setTimeout(()=>{activeTabRef.current&&activeTabRef.current.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"});},120);
+    return()=>clearTimeout(id);
+  },[activeWeek,view]);
 
-  const weekKeys=Object.keys(allWeeks).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort((a,b)=>b.localeCompare(a));
+  // Chronological order: oldest → newest, left → right. This matches the
+  // ◀ (back in time) / ▶ (forward in time) arrows so tabs read intuitively.
+  const weekKeys=Object.keys(allWeeks).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort((a,b)=>a.localeCompare(b));
   const isPast=key=>key<currentWeekKey;const isCurrentWeek=activeWeek===currentWeekKey;const past=isPast(activeWeek);
   function dateOfDow(dow){const sun=getSundayForKey(activeWeek);return addDays(sun,dow).getDate();}
   function dayHasMissed(dow,wk){if(!isPast(wk))return false;const ts=(allWeeks[wk]||{})[dow]||[];return ts.length>0&&ts.some(t=>!t.done);}
@@ -808,15 +818,17 @@ export default function App(){
 
         <div className="week-nav">
           <button className="week-step" onClick={()=>stepWeek(-1)} title="Previous week">◀</button>
-          {weekKeys.map(key=>{const missed=weekHasMissed(key);const isCur=key===currentWeekKey;const isAct=key===activeWeek;
-            return(<button key={key} className={`week-tab${isAct?" active":""}${missed?" has-missed":""}`} onClick={()=>goToWeek(key)}>{isCur?"THIS WEEK":weekLabel(key)}{missed?" ⚠":""}</button>);})}
+          <div className="week-tabs">
+            {weekKeys.map(key=>{const missed=weekHasMissed(key);const isCur=key===currentWeekKey;const isAct=key===activeWeek;
+              return(<button key={key} ref={isAct?activeTabRef:null} className={`week-tab${isAct?" active":""}${missed?" has-missed":""}`} onClick={()=>goToWeek(key)}>{isCur?"THIS WEEK":weekLabel(key)}{missed?" ⚠":""}</button>);})}
+          </div>
           <button className="week-step" onClick={()=>stepWeek(1)} title="Next week">▶</button>
           {activeWeek!==currentWeekKey&&<button className="week-step today-jump" onClick={()=>goToWeek(currentWeekKey)} title="Jump to this week">⌂</button>}
         </div>
         <div className="week-nav-border"/>
         <div className="week-label">{weekLabel(activeWeek)}<span className={`week-label-badge ${isCurrentWeek?"badge-current":isPast(activeWeek)?"badge-past":"badge-future"}`}>{isCurrentWeek?"CURRENT":isPast(activeWeek)?"PAST — READ ONLY":"UPCOMING"}</span></div>
 
-        <div className="stack">
+        <div className="stack fade-in" key={activeWeek}>
           {[0,1,2,3,4,5,6].map(dow=>{
             const ts=activeTasks(dow);const done=ts.filter(t=>t.done).length;const pct=ts.length?Math.round((done/ts.length)*100):0;
             const hasMissed=dayHasMissed(dow,activeWeek);const allDone=ts.length>0&&done===ts.length;
