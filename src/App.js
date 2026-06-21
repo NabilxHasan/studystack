@@ -573,6 +573,7 @@ export default function App(){
   const[user,setUser]=useState(null);const[authReady,setAuthReady]=useState(false);
   const[allWeeks,setAllWeeks]=useState({[currentWeekKey]:DEFAULT_TASKS});
   const[studyLog,setStudyLog]=useState({});
+  const[keptWeeks,setKeptWeeks]=useState({});
   const[view,setView]=useState("home"); // home | tasks | study
   const[activeWeek,setActiveWeek]=useState(currentWeekKey);
   const[openDay,setOpenDay]=useState(todayDow);const[editDay,setEditDay]=useState(null);
@@ -601,11 +602,12 @@ export default function App(){
         if(!aw[currentWeekKey]) aw={...aw,[currentWeekKey]:weekFromTemplate(Object.keys(aw).length?aw[Object.keys(aw).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().pop()]:DEFAULT_TASKS)};
         setAllWeeks(aw);
         setStudyLog(d.studyLog||{});
+        setKeptWeeks(d.keptWeeks||{});
       }else{
         // brand new account — seed defaults once
         setAllWeeks({[currentWeekKey]:DEFAULT_TASKS});
         setStudyLog({});
-        setDoc(ref,{allWeeks:{[currentWeekKey]:DEFAULT_TASKS},studyLog:{}});
+        setDoc(ref,{allWeeks:{[currentWeekKey]:DEFAULT_TASKS},studyLog:{},keptWeeks:{}});
       }
       loadedForUid.current=user.uid;
       setSyncing(false);
@@ -623,12 +625,12 @@ export default function App(){
       const pruned={};
       for(const[k,wk]of Object.entries(allWeeks)){
         const hasAny=Object.values(wk||{}).some(arr=>Array.isArray(arr)&&arr.length>0);
-        if(k===currentWeekKey||k===activeWeek||hasAny) pruned[k]=wk;
+        if(k===currentWeekKey||k===activeWeek||keptWeeks[k]||hasAny) pruned[k]=wk;
       }
-      try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks:pruned,studyLog});}catch(e){console.error(e);}
+      try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks:pruned,studyLog,keptWeeks});}catch(e){console.error(e);}
       setSyncing(false);
     },800);
-  },[allWeeks,studyLog,user]);
+  },[allWeeks,studyLog,keptWeeks,user]);
   // When entering TASKS view, smoothly scroll today's card into view.
   useEffect(()=>{
     if(view==="tasks"){
@@ -656,6 +658,7 @@ export default function App(){
       const srcWeek=srcKey?prev[srcKey]:DEFAULT_TASKS;
       return {...prev,[key]:weekFromTemplate(srcWeek)};
     });
+    setKeptWeeks(prev=>prev[key]?prev:{...prev,[key]:true});
     setActiveWeek(key);
     setOpenDay(key===currentWeekKey?todayDow:0);
     setEditDay(null);
