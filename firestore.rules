@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// Study Stack — Firestore security rules.
+// Principle: a signed-in user may read/write ONLY their own data, nothing else.
+// Everything not explicitly allowed below is denied by default.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // All per-user data lives under users/{uid}/...
+    // (current app writes users/{uid}/data/weeks)
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // Explicit catch-all deny (default is deny anyway; this documents intent).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

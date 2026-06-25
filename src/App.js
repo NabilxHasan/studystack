@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence, terminate, clearIndexedDbPersistence } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, sendEmailVerification, deleteUser } from "firebase/auth";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence, terminate, clearIndexedDbPersistence, deleteDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAjh6UHtqNWS2d4vsot1-WicwgevBzUtpg",
@@ -94,6 +94,56 @@ function fmtClock(secs){
   const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=Math.floor(secs%60);
   const mm=String(m).padStart(2,"0"), ss=String(s).padStart(2,"0");
   return h>0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+// ── OWNER / CONTACT ──
+const OWNER_NAME  = "Nabil";
+const OWNER_EMAIL = "nabilhasanjami@gmail.com";
+
+// ── LOCK IN + MOTIVATION CONFIG ──
+const BKASH_NUMBER = "01882480457";   // shown on the "give up" screen — EDIT to change
+const LOCKIN_FEE   = 500;             // taka required to buy your way out early
+const TRXID_RE     = /^[A-Z0-9]{10}$/;// bKash Transaction ID format (10 letters/digits)
+
+const SAVAGE_QUOTES = [
+  "{name} is studying hard. What are you doing?",
+  "While you scroll, {name} is grinding.",
+  "{name} just finished another chapter. And you?",
+  "{name} doesn't take breaks. Why are you?",
+  "Somewhere out there, {name} is locking in. Be like {name}.",
+  "{name} will pass. Will you?",
+  "{name} woke up early to study. You woke up to excuses.",
+  "Every minute you waste, {name} gets further ahead.",
+  "{name} isn't smarter than you — just more disciplined.",
+  "{name} is building a future. You're building regrets.",
+  "Stop scrolling. {name} already did today's tasks.",
+  "{name} closed the app and opened a book.",
+  "You vs {name}. Right now, {name} is winning.",
+  "{name} stayed consistent. That's the whole secret.",
+  "One day {name} will thank past {name}. Will you?",
+];
+function fillQuote(raw,name){ return (raw||"").replace(/\{name\}/g, name||"They"); }
+function pickQuote(name, extra){
+  const pool=[...SAVAGE_QUOTES, ...((extra||[]))];
+  return fillQuote(pool[Math.floor(Math.random()*pool.length)]||"", name);
+}
+
+// Screen Wake Lock: keep the device awake while a timer/lock is active so the
+// screen never sleeps. On mobile, a sleeping screen freezes/discards the page —
+// that is what made the study timer appear to "reset". Re-acquired on resume.
+function useWakeLock(active){
+  const lockRef=useRef(null);
+  useEffect(()=>{
+    if(!active) return;
+    let cancelled=false;
+    async function acquire(){
+      try{ if("wakeLock" in navigator){ lockRef.current=await navigator.wakeLock.request("screen"); } }catch(e){}
+    }
+    acquire();
+    const onVis=()=>{ if(!cancelled && active && document.visibilityState==="visible") acquire(); };
+    document.addEventListener("visibilitychange",onVis);
+    return()=>{ cancelled=true; document.removeEventListener("visibilitychange",onVis); try{ lockRef.current&&lockRef.current.release(); }catch(e){} lockRef.current=null; };
+  },[active]);
 }
 
 const THEMES = {
@@ -372,6 +422,139 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .streak-badge.cold .flame{filter:grayscale(1);opacity:0.5;}
 .home-streak{display:flex;justify-content:center;margin-top:14px;}
 .loading{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Orbitron',monospace;font-size:12px;letter-spacing:4px;color:var(--accent);}
+
+/* ── LOCK IN: setup ── */
+.lock-setup{position:relative;z-index:2;max-width:540px;margin:0 auto;padding:30px 20px;}
+.lock-card{border:1px solid var(--bord2);border-radius:24px;padding:32px 24px;background:rgba(10,6,20,0.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);text-align:center;box-shadow:0 0 40px rgba(0,0,0,0.4);}
+.lock-card-icon{font-size:50px;filter:drop-shadow(0 0 14px var(--accent));}
+.lock-card-title{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;letter-spacing:2px;color:var(--text);margin-top:8px;}
+.lock-card-desc{font-family:'Rajdhani',sans-serif;font-size:14px;color:var(--dim);margin-top:8px;line-height:1.5;}
+.lock-presets{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:22px 0 8px;}
+.lock-preset{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:1px;padding:11px 16px;border-radius:12px;border:1px solid var(--border);background:rgba(0,0,0,0.4);color:var(--text);cursor:pointer;transition:all 0.15s;}
+.lock-preset:hover{border-color:var(--bord2);}
+.lock-preset.active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 12px var(--accent);}
+.lock-custom{display:flex;align-items:flex-end;gap:10px;justify-content:center;margin:18px 0 6px;}
+.lock-num{width:84px;}
+.lock-num-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:6px;display:block;}
+.lock-num-input{width:100%;background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:10px;padding:12px;font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--text);outline:none;text-align:center;}
+.lock-num-input:focus{border-color:var(--accent);}
+.lock-total{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent3);margin:6px 0 20px;}
+.lock-start-btn{width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:14px;padding:16px;font-family:'Orbitron',monospace;font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;box-shadow:0 0 22px var(--accent);transition:all 0.15s;}
+.lock-start-btn:hover{filter:brightness(1.12);}
+.lock-start-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.lock-warn{font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--yellow);margin-top:16px;line-height:1.5;background:rgba(255,216,77,0.06);border:1px solid rgba(255,216,77,0.2);border-radius:10px;padding:12px;}
+
+/* ── LOCK IN: full-screen lock overlay ── */
+.lockin{position:fixed;inset:0;z-index:100000;background:rgba(4,2,10,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;overflow:auto;backdrop-filter:blur(4px);}
+.lockin-tag{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:5px;color:var(--accent);margin-bottom:18px;}
+.lockin-time{font-family:'Orbitron',monospace;font-size:clamp(40px,16vw,86px);font-weight:900;letter-spacing:2px;color:var(--text);text-shadow:0 0 26px var(--accent);line-height:1;}
+.lockin-sub{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--dim);margin-top:10px;}
+.lockin-quote{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;color:var(--accent3);margin:26px 0;max-width:440px;line-height:1.5;}
+.lockin-bar{width:min(440px,86vw);height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:26px;}
+.lockin-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));box-shadow:0 0 8px var(--accent);transition:width 0.5s linear;}
+.lockin-shame{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--red);margin-bottom:18px;}
+.lockin-reenter{background:rgba(255,64,96,0.12);border:1px solid var(--red);color:var(--red);border-radius:12px;padding:14px 22px;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;margin-bottom:16px;animation:pulseRing 1.6s infinite;}
+.lockin-giveup{background:none;border:1px solid var(--border);color:var(--dim);border-radius:12px;padding:12px 22px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all 0.15s;}
+.lockin-giveup:hover{border-color:var(--red);color:var(--red);}
+.lockin-done-emoji{font-size:60px;margin-bottom:10px;animation:float 2.5s ease-in-out infinite;}
+.lockin-finish{margin-top:24px;background:linear-gradient(135deg,var(--green),#2bd6a0);color:#04140d;border:none;border-radius:14px;padding:16px 34px;font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;box-shadow:0 0 22px var(--green);}
+/* give-up / donate screen */
+.giveup-box{max-width:430px;width:100%;background:rgba(8,4,16,0.92);border:1px solid var(--red);border-radius:20px;padding:28px 24px;box-shadow:0 0 50px rgba(255,64,96,0.35);}
+.giveup-title{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;letter-spacing:1px;color:var(--red);}
+.giveup-text{font-family:'Rajdhani',sans-serif;font-size:15px;color:var(--text);margin-top:12px;line-height:1.55;}
+.giveup-bkash{margin:18px 0;padding:16px;border-radius:12px;background:rgba(226,0,116,0.12);border:1px solid rgba(226,0,116,0.5);}
+.giveup-bkash-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);}
+.giveup-bkash-num{font-family:'Orbitron',monospace;font-size:24px;font-weight:900;color:#ff3d9b;letter-spacing:1px;margin-top:4px;text-shadow:0 0 12px rgba(226,0,116,0.6);}
+.giveup-bkash-amt{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text);margin-top:6px;}
+.giveup-input{width:100%;background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:10px;padding:13px 14px;font-family:'Share Tech Mono',monospace;font-size:16px;font-weight:600;color:var(--text);outline:none;letter-spacing:3px;text-align:center;text-transform:uppercase;}
+.giveup-input:focus{border-color:var(--accent);}
+.giveup-err{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red);letter-spacing:1px;margin-top:8px;}
+.giveup-actions{display:flex;gap:8px;margin-top:18px;}
+.giveup-cancel{flex:1;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;border-radius:12px;padding:14px;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;box-shadow:0 0 16px var(--accent);}
+.giveup-confirm{flex:1;background:none;border:1px solid var(--red);color:var(--red);border-radius:12px;padding:14px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;}
+.giveup-confirm:hover{background:rgba(255,64,96,0.1);}
+
+/* ── MOTIVATION ── */
+.mv-wrap{position:relative;z-index:2;max-width:540px;margin:0 auto;padding:30px 20px;}
+.mv-card{border:1px solid var(--bord2);border-radius:20px;padding:24px;background:rgba(10,6,20,0.62);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);margin-bottom:16px;}
+.mv-card-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.mv-name-input{width:100%;background:rgba(0,0,0,0.45);border:1px solid var(--border);border-radius:10px;padding:13px 16px;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--text);outline:none;letter-spacing:1px;}
+.mv-name-input:focus{border-color:var(--accent);box-shadow:0 0 10px var(--accent);}
+.mv-preview{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;color:var(--accent3);margin-top:14px;line-height:1.5;min-height:24px;background:rgba(0,0,0,0.3);border:1px dashed var(--border);border-radius:10px;padding:12px;}
+.mv-gen-btn{margin-top:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:10px;padding:12px 18px;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;box-shadow:0 0 16px var(--accent);}
+.mv-gen-btn:hover{filter:brightness(1.12);}
+.mv-add-this{margin-top:10px;background:none;border:1px solid var(--bord2);color:var(--accent);border-radius:10px;padding:11px 18px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;}
+.mv-add-this:hover{box-shadow:0 0 10px var(--accent);}
+.mv-quote-row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(10,6,20,0.5);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.mv-quote-txt{flex:1;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;color:var(--text);line-height:1.4;}
+.mv-empty{text-align:center;padding:18px 0;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--dimmer);}
+
+/* motivation entry popup */
+.mv-pop-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);animation:fadeIn 0.3s ease;}
+.mv-pop{background:rgba(8,4,16,0.94);border:1px solid var(--accent);border-radius:24px;padding:36px 28px;text-align:center;max-width:400px;width:100%;box-shadow:0 0 60px var(--accent);animation:popIn 0.4s cubic-bezier(.23,1,.32,1);}
+.mv-pop-emoji{font-size:52px;margin-bottom:12px;animation:float 2.5s ease-in-out infinite;}
+.mv-pop-quote{font-family:'Rajdhani',sans-serif;font-size:21px;font-weight:700;color:var(--text);line-height:1.45;margin-bottom:6px;}
+.mv-pop-btn{margin-top:22px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:12px;padding:13px 30px;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;box-shadow:0 0 18px var(--accent);}
+.mv-pop-btn:hover{filter:brightness(1.15);}
+
+/* ── ACCOUNT / SETTINGS modal ── */
+.acct-email{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--text);margin-bottom:18px;word-break:break-all;}
+.acct-verified{color:var(--green);}
+.acct-unverified{color:var(--yellow);}
+.acct-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--border);}
+.acct-row.danger .acct-row-title{color:var(--red);}
+.acct-row-info{flex:1;min-width:0;}
+.acct-row-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
+.acct-row-desc{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--dim);margin-top:2px;line-height:1.35;}
+.acct-btn{flex-shrink:0;background:rgba(0,0,0,0.45);border:1px solid var(--bord2);color:var(--accent);border-radius:8px;padding:9px 14px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;}
+.acct-btn:hover{box-shadow:0 0 10px var(--accent);}
+.acct-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.acct-btn.del{border-color:var(--red);color:var(--red);}
+.acct-btn.del:hover{box-shadow:0 0 10px var(--red);background:rgba(255,64,96,0.1);}
+.acct-warn{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--yellow);background:rgba(255,216,77,0.07);border:1px solid rgba(255,216,77,0.25);border-radius:8px;padding:10px;margin-top:10px;line-height:1.4;}
+.acct-msg{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:0.5px;color:var(--accent3);margin-top:14px;line-height:1.5;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:10px;}
+.acct-link-btn{background:rgba(0,0,0,0.5);border:1px solid var(--border);color:var(--accent2);border-radius:7px;padding:5px 10px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;line-height:1;transition:all 0.15s;white-space:nowrap;}
+.acct-link-btn:hover{border-color:var(--accent2);box-shadow:0 0 8px var(--accent2);}
+.acct-uname-field{margin-bottom:6px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.acct-legal{text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--dim);margin-top:16px;}
+.acct-legal a,.auth-legal a,.auth-footer a{color:var(--accent3);text-decoration:none;}
+.acct-legal a:hover,.auth-legal a:hover,.auth-footer a:hover{text-decoration:underline;}
+.auth-legal{font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--dim);text-align:center;margin-top:14px;line-height:1.5;}
+.auth-footer{margin-top:22px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--dim);}
+
+/* ── CYBERPUNK 2-LINE LOGO ── */
+.cyber-logo{display:inline-flex;flex-direction:column;align-items:center;font-family:'Orbitron',monospace;font-weight:900;line-height:0.86;text-align:center;user-select:none;}
+.cyber-logo .cl-line{display:block;position:relative;letter-spacing:10px;padding-left:10px;}
+.cyber-logo .cl-line+.cl-line{margin-top:2px;}
+.cyber-logo .cl-main{position:relative;background:linear-gradient(180deg,#9affff 0%,#22e0ff 32%,#c45bff 68%,#ff2d9b 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(34,224,255,0.55)) drop-shadow(0 0 30px rgba(255,45,155,0.35));}
+.cyber-logo .cl-glitch{position:absolute;left:10px;top:0;opacity:0;pointer-events:none;}
+.cyber-logo .cl-glitch.r{color:#ff2d9b;-webkit-text-fill-color:#ff2d9b;text-shadow:0 0 8px #ff2d9b;animation:clGlitchR 3.2s infinite;}
+.cyber-logo .cl-glitch.c{color:#22e0ff;-webkit-text-fill-color:#22e0ff;text-shadow:0 0 8px #22e0ff;animation:clGlitchC 3.9s infinite;}
+@keyframes clGlitchR{0%,88%,100%{opacity:0;transform:translate(0,0);}89%{opacity:0.75;transform:translate(-3px,1px);}92%{opacity:0.55;transform:translate(2px,-1px);}95%{opacity:0;}}
+@keyframes clGlitchC{0%,90%,100%{opacity:0;transform:translate(0,0);}91%{opacity:0.7;transform:translate(3px,-1px);}94%{opacity:0.5;transform:translate(-2px,1px);}97%{opacity:0;}}
+.home-cyber{font-size:46px;}
+.auth-cyber{font-size:40px;margin-bottom:6px;animation:float 3s ease-in-out infinite;}
+@media (max-width:380px){.home-cyber{font-size:38px;}.auth-cyber{font-size:34px;}.cyber-logo .cl-line{letter-spacing:7px;}}
+
+/* ── STREAK BOARD ── */
+.streak-board{margin-top:20px;border:1px solid var(--bord2);border-radius:18px;padding:20px 18px;background:rgba(10,6,20,0.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 0 24px rgba(0,0,0,0.35);}
+.sb-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--accent);text-align:center;margin-bottom:14px;}
+.sb-head{display:flex;gap:22px;justify-content:center;margin-bottom:16px;}
+.sb-stat{display:flex;flex-direction:column;align-items:center;}
+.sb-stat-num{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--accent);text-shadow:0 0 12px var(--accent);}
+.sb-stat-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-top:3px;}
+.sb-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.sb-dow{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--dim);text-align:center;padding-bottom:3px;}
+.sb-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:10px;border:1px solid var(--border);color:var(--dimmer);transition:transform 0.12s;}
+.sb-cell:hover{transform:scale(1.12);}
+.sb-done{background:rgba(61,255,143,0.85);color:#04140d;border-color:var(--green);box-shadow:0 0 8px rgba(61,255,143,0.5);font-weight:700;}
+.sb-missed{background:rgba(255,64,96,0.18);border-color:rgba(255,64,96,0.5);color:rgba(255,150,165,0.9);}
+.sb-rest{background:rgba(255,255,255,0.03);color:var(--dimmer);}
+.sb-today{border-color:var(--accent);box-shadow:0 0 8px var(--accent);color:var(--accent);font-weight:700;}
+.sb-future{opacity:0.22;}
+.sb-legend{display:flex;gap:14px;justify-content:center;margin-top:15px;flex-wrap:wrap;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--dim);}
+.sb-legend span{display:flex;align-items:center;gap:5px;}
+.sb-dot{width:11px;height:11px;border-radius:3px;display:inline-block;}
 `;
 
 // ── SCENE (unchanged rich canvas) ──
@@ -413,12 +596,27 @@ function Scene({ themeKey }){
   return <canvas ref={canvasRef} className="scene-canvas"/>;
 }
 
+// Cyberpunk two-line "STUDY / STACK" logo with neon gradient + glitch clones.
+function CyberLogo({ className="" }){
+  return(
+    <div className={`cyber-logo ${className}`}>
+      {["STUDY","STACK"].map(w=>(
+        <span className="cl-line" key={w}>
+          <span className="cl-glitch r" aria-hidden="true">{w}</span>
+          <span className="cl-glitch c" aria-hidden="true">{w}</span>
+          <span className="cl-main">{w}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function AuthScreen(){
   const[tab,setTab]=useState("login");const[email,setEmail]=useState("");const[pass,setPass]=useState("");const[error,setError]=useState("");const[loading,setLoading]=useState(false);
   async function handle(){setError("");setLoading(true);try{if(tab==="login")await signInWithEmailAndPassword(auth,email,pass);else await createUserWithEmailAndPassword(auth,email,pass);}catch(e){setError(e.message.replace("Firebase: ","").replace(/\(auth.*\)\.?/,"").trim());}setLoading(false);}
   return(
     <div className="auth-screen fade-in">
-      <div className="auth-logo">STUDY STACK</div><div className="auth-sub">WEEKLY ROUTINE TRACKER</div>
+      <CyberLogo className="auth-cyber"/><div className="auth-sub">WEEKLY ROUTINE TRACKER</div>
       <div className="auth-card">
         <div className="auth-tabs">
           <button className={`auth-tab${tab==="login"?" active":""}`} onClick={()=>{setTab("login");setError("");}}>LOG IN</button>
@@ -428,7 +626,9 @@ function AuthScreen(){
         <div className="auth-field"><label className="auth-label">PASSWORD</label><input className="auth-input" type="password" placeholder="••••••••" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handle()}/></div>
         {error&&<div className="auth-error">{error}</div>}
         <button className="auth-btn" onClick={handle} disabled={loading||!email||!pass}>{loading?"LOADING...":tab==="login"?"ENTER":"CREATE ACCOUNT"}</button>
+        {tab==="signup"&&<div className="auth-legal">By creating an account you agree to our <a href={`${process.env.PUBLIC_URL}/terms.html`} target="_blank" rel="noreferrer">Terms</a> &amp; <a href={`${process.env.PUBLIC_URL}/privacy.html`} target="_blank" rel="noreferrer">Privacy Policy</a>.</div>}
       </div>
+      <div className="auth-footer"><a href={`${process.env.PUBLIC_URL}/privacy.html`} target="_blank" rel="noreferrer">Privacy</a> · <a href={`${process.env.PUBLIC_URL}/terms.html`} target="_blank" rel="noreferrer">Terms</a> · © {OWNER_NAME}</div>
     </div>
   );
 }
@@ -469,10 +669,26 @@ function StudyView({ studyLog, onSave }){
   const startRef=useRef(null);
   const tickRef=useRef(null);
 
-  useEffect(()=>()=>clearInterval(tickRef.current),[]);
+  // Keep the screen awake while studying (fixes the "timer resets on sleep" bug).
+  useWakeLock(running);
+
+  // On mount, resume an in-progress session that survived a reload/sleep. The
+  // start time is persisted, so elapsed is always recomputed from the wall clock.
+  useEffect(()=>{
+    let saved=0; try{ saved=+(localStorage.getItem("sq_study_start")||0); }catch(e){}
+    if(saved>0){
+      startRef.current=saved;
+      setRunning(true);
+      setElapsed(Math.floor((Date.now()-saved)/1000));
+      tickRef.current=setInterval(()=>{ setElapsed(Math.floor((Date.now()-startRef.current)/1000)); },250);
+    }
+    return()=>clearInterval(tickRef.current);
+  },[]);
 
   function start(){SFX.start();
-    startRef.current=Date.now();
+    const t=Date.now();
+    startRef.current=t;
+    try{ localStorage.setItem("sq_study_start",String(t)); }catch(e){}
     setElapsed(0);setRunning(true);
     tickRef.current=setInterval(()=>{
       setElapsed(Math.floor((Date.now()-startRef.current)/1000));
@@ -480,6 +696,7 @@ function StudyView({ studyLog, onSave }){
   }
   function stop(){
     clearInterval(tickRef.current);
+    try{ localStorage.removeItem("sq_study_start"); }catch(e){}
     const secs=Math.floor((Date.now()-startRef.current)/1000);
     setRunning(false);
     if(secs>0){ onSave(secs); setCongrats(secs); SFX.win(); } else { SFX.stop(); }
@@ -534,8 +751,8 @@ function StudyView({ studyLog, onSave }){
         </div>
         <div className="timer-hint">
           {running
-            ? "Go ahead and study — you can leave this open and AFK. Hit STOP when you're done."
-            : "Press start, then study away. Time keeps counting even if you switch tabs or go AFK."}
+            ? "Go ahead and study — screen stays awake and the timer survives sleep/reload. Hit STOP when you're done."
+            : "Press start, then study away. Time keeps counting even if you switch tabs, sleep, or go AFK."}
         </div>
         <div className="today-total">
           <div className="today-total-label">STUDIED TODAY</div>
@@ -568,6 +785,335 @@ function StudyView({ studyLog, onSave }){
   );
 }
 
+// ── LOCK IN: setup screen ──
+function LockSetupView({ onStart }){
+  const[hours,setHours]=useState(2);
+  const[mins,setMins]=useState(0);
+  const total=(parseInt(hours,10)||0)*60+(parseInt(mins,10)||0); // minutes
+  const presets=[{h:2,m:0,l:"2 HRS"},{h:4,m:0,l:"4 HRS"},{h:6,m:0,l:"6 HRS"},{h:12,m:0,l:"12 HRS"}];
+  function startNow(){
+    if(total<=0)return;
+    SFX.start();
+    // requestFullscreen must run inside this user gesture
+    try{ const el=document.documentElement; const fn=el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen; fn&&fn.call(el); }catch(e){}
+    onStart(total*60*1000);
+  }
+  return(
+    <div className="lock-setup fade-in">
+      <div className="lock-card">
+        <div className="lock-card-icon">🔒</div>
+        <div className="lock-card-title">LOCK IN</div>
+        <div className="lock-card-desc">Set a countdown and commit. The screen takes over and stays awake. To bail early you'll have to donate {LOCKIN_FEE}tk via bKash.</div>
+        <div className="lock-presets">
+          {presets.map(p=>(
+            <button key={p.l} className={`lock-preset${hours===p.h&&mins===p.m?" active":""}`} onClick={()=>{SFX.tap();setHours(p.h);setMins(p.m);}}>{p.l}</button>
+          ))}
+        </div>
+        <div className="lock-custom">
+          <div className="lock-num"><label className="lock-num-label">HOURS</label><input className="lock-num-input" type="number" min="0" max="24" value={hours} onChange={e=>setHours(e.target.value)}/></div>
+          <div className="lock-num"><label className="lock-num-label">MINUTES</label><input className="lock-num-input" type="number" min="0" max="59" value={mins} onChange={e=>setMins(e.target.value)}/></div>
+        </div>
+        <div className="lock-total">TOTAL: {Math.floor(total/60)}H {total%60}M</div>
+        <button className="lock-start-btn" onClick={startNow} disabled={total<=0}>▶ START LOCK IN</button>
+        <div className="lock-warn">⚠ Heads up: a website can't fully block Alt+Tab or closing the tab — but this will go fullscreen, keep the screen awake, warn you if you try to leave, and survive reloads. The timer won't release until it ends or you pay the {LOCKIN_FEE}tk give-up fee.</div>
+      </div>
+    </div>
+  );
+}
+
+// ── LOCK IN: full-screen lock overlay (renders over everything while active) ──
+function LockOverlay({ start, end, motivation, onComplete, onGiveUp }){
+  const[now,setNow]=useState(Date.now());
+  const[phase,setPhase]=useState("locked"); // locked | giveup | done
+  const[trx,setTrx]=useState("");
+  const[err,setErr]=useState("");
+  const[escapes,setEscapes]=useState(0);
+  const[isFs,setIsFs]=useState(typeof document!=="undefined"&&!!document.fullscreenElement);
+  const[quote]=useState(()=>pickQuote(motivation&&motivation.name, motivation&&motivation.quotes));
+  useWakeLock(true);
+
+  useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),250); return()=>clearInterval(id); },[]);
+  useEffect(()=>{ if(phase==="locked"&&now>=end){ setPhase("done"); SFX.win(); } },[now,end,phase]);
+
+  // warn before close / reload while locked
+  useEffect(()=>{
+    if(phase==="done")return;
+    const h=e=>{ e.preventDefault(); e.returnValue=""; return ""; };
+    window.addEventListener("beforeunload",h);
+    return()=>window.removeEventListener("beforeunload",h);
+  },[phase]);
+
+  // shame counter: leaving fullscreen or hiding the tab counts as an escape
+  useEffect(()=>{
+    const onFs=()=>{ const f=!!document.fullscreenElement; setIsFs(f); if(!f&&phase==="locked") setEscapes(c=>c+1); };
+    const onVis=()=>{ if(document.visibilityState==="hidden"&&phase==="locked") setEscapes(c=>c+1); };
+    document.addEventListener("fullscreenchange",onFs);
+    document.addEventListener("visibilitychange",onVis);
+    return()=>{ document.removeEventListener("fullscreenchange",onFs); document.removeEventListener("visibilitychange",onVis); };
+  },[phase]);
+
+  function reenter(){ try{ const el=document.documentElement; const fn=el.requestFullscreen||el.webkitRequestFullscreen; fn&&fn.call(el); }catch(e){} }
+  function confirmGiveUp(){
+    const v=trx.trim().toUpperCase();
+    if(!TRXID_RE.test(v)){ setErr("Enter a valid bKash TrxID — 10 letters/digits."); SFX.del(); return; }
+    SFX.stop();
+    onGiveUp(v);
+  }
+
+  const remaining=Math.max(0,Math.ceil((end-now)/1000));
+  const span=Math.max(1,end-start);
+  const prog=Math.min(1,Math.max(0,(now-start)/span));
+
+  if(phase==="done"){
+    return(
+      <div className="lockin">
+        <div className="lockin-done-emoji">🏆</div>
+        <div className="lockin-tag" style={{color:"var(--green)"}}>LOCK IN COMPLETE</div>
+        <div className="lockin-quote">You stayed locked in the whole time. That's discipline. Respect.</div>
+        <button className="lockin-finish" onClick={()=>{ try{document.fullscreenElement&&document.exitFullscreen();}catch(e){} onComplete(); }}>FINISH ✓</button>
+      </div>
+    );
+  }
+
+  if(phase==="giveup"){
+    return(
+      <div className="lockin">
+        <div className="giveup-box">
+          <div className="giveup-title">🏳️ GIVING UP?</div>
+          <div className="giveup-text">Quitting early costs <b>{LOCKIN_FEE}tk</b>. Send it via bKash <b>Send Money</b>, then paste the Transaction ID (TrxID) below to unlock.</div>
+          <div className="giveup-bkash">
+            <div className="giveup-bkash-label">bKash — SEND MONEY TO</div>
+            <div className="giveup-bkash-num">{BKASH_NUMBER}</div>
+            <div className="giveup-bkash-amt">AMOUNT: {LOCKIN_FEE}.00 TK</div>
+          </div>
+          <input className="giveup-input" placeholder="TRX ID e.g. 9F2A3BX7QK" value={trx} maxLength={10} onChange={e=>{setTrx(e.target.value.toUpperCase());setErr("");}}/>
+          {err&&<div className="giveup-err">{err}</div>}
+          <div className="giveup-actions">
+            <button className="giveup-cancel" onClick={()=>{SFX.tap();setPhase("locked");setTrx("");setErr("");}}>NO, KEEP GOING</button>
+            <button className="giveup-confirm" onClick={confirmGiveUp}>UNLOCK</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div className="lockin">
+      <div className="lockin-tag">● LOCKED IN — STAY FOCUSED</div>
+      <div className="lockin-time">{fmtClock(remaining)}</div>
+      <div className="lockin-sub">REMAINING</div>
+      <div className="lockin-quote">{quote}</div>
+      <div className="lockin-bar"><div className="lockin-bar-fill" style={{width:`${Math.round(prog*100)}%`}}/></div>
+      {escapes>0&&<div className="lockin-shame">⚠ YOU LEFT {escapes} TIME{escapes!==1?"S":""} — GET BACK TO WORK</div>}
+      {!isFs&&<button className="lockin-reenter" onClick={reenter}>⛶ RE-ENTER FULLSCREEN</button>}
+      <button className="lockin-giveup" onClick={()=>{SFX.tap();setPhase("giveup");}}>I GIVE UP ({LOCKIN_FEE}TK)</button>
+    </div>
+  );
+}
+
+// ── MOTIVATION: set rival name, manage + generate savage quotes ──
+function MotivationView({ motivation, onSave }){
+  const[name,setName]=useState(motivation.name||"");
+  const[quotes,setQuotes]=useState(motivation.quotes||[]);
+  const[draft,setDraft]=useState("");
+  const[genRaw,setGenRaw]=useState("");
+  const first=useRef(true);
+
+  // push changes up (parent persists to Firestore). Skip the initial mount.
+  useEffect(()=>{ if(first.current){first.current=false;return;} onSave({name,quotes}); },[name,quotes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function generate(){
+    const avail=SAVAGE_QUOTES.filter(q=>!quotes.includes(q));
+    const pool=avail.length?avail:SAVAGE_QUOTES;
+    setGenRaw(pool[Math.floor(Math.random()*pool.length)]);
+    SFX.click();
+  }
+  function addGenerated(){ if(genRaw&&!quotes.includes(genRaw)){ setQuotes([...quotes,genRaw]); SFX.add(); } }
+  function addCustom(){ const v=draft.trim(); if(!v)return; setQuotes([...quotes,v]); setDraft(""); SFX.add(); }
+  function delQuote(i){ setQuotes(quotes.filter((_,idx)=>idx!==i)); SFX.del(); }
+
+  return(
+    <div className="mv-wrap fade-in">
+      <div className="mv-card">
+        <div className="mv-card-title">😈 YOUR RIVAL</div>
+        <input className="mv-name-input" placeholder="Name a rival… e.g. Bob" value={name} onChange={e=>setName(e.target.value)}/>
+        <div className="mv-preview">{name?pickQuote(name,quotes):"Set a name and we'll roast you with it every time you open the app."}</div>
+      </div>
+
+      <div className="mv-card">
+        <div className="mv-card-title">🎲 GENERATE A ROAST</div>
+        {genRaw&&<div className="mv-preview">{fillQuote(genRaw,name)}</div>}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          <button className="mv-gen-btn" onClick={generate}>🎲 RANDOM ROAST</button>
+          {genRaw&&!quotes.includes(genRaw)&&<button className="mv-add-this" onClick={addGenerated}>+ SAVE TO MY QUOTES</button>}
+        </div>
+      </div>
+
+      <div className="mv-card">
+        <div className="mv-card-title">✍️ ADD YOUR OWN</div>
+        <div style={{display:"flex",gap:8}}>
+          <input className="add-input" placeholder="Use {name} where the rival goes…" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustom()}/>
+          <button className="add-btn" onClick={addCustom}>+</button>
+        </div>
+        <div style={{marginTop:14}}>
+          {quotes.length===0
+            ? <div className="mv-empty">NO CUSTOM QUOTES YET</div>
+            : quotes.map((q,i)=>(
+                <div key={i} className="mv-quote-row">
+                  <span className="mv-quote-txt">{fillQuote(q,name)}</span>
+                  <button className="del-btn" onClick={()=>delQuote(i)}>✕</button>
+                </div>
+              ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── STREAK BOARD: visual history of which past days you kept your streak ──
+function StreakBoard({ tasksForDate }){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayKey=dateStr(today);
+  function statusOf(d){
+    const dd=new Date(d); dd.setHours(0,0,0,0);
+    if(dd>today) return "future";
+    const ts=tasksForDate(dd);
+    if(!ts || ts.length===0) return "rest";
+    if(ts.every(t=>t.done)) return "done";
+    if(dateStr(dd)===todayKey) return "today";
+    return "missed";
+  }
+  // 6 calendar weeks ending this week (Sun..Sat columns)
+  const sun=getSundayForKey(getWeekKey(today));
+  const cells=[];
+  for(let w=5;w>=0;w--){ const wkStart=addDays(sun,-7*w); for(let i=0;i<7;i++){ const d=addDays(wkStart,i); cells.push({d,st:statusOf(d)}); } }
+
+  // current streak (rest days skip, missed breaks; today counts only if all done)
+  let cur=0;
+  const tt=tasksForDate(today);
+  if(tt.length>0 && tt.every(t=>t.done)) cur++;
+  { const d=new Date(today); d.setDate(d.getDate()-1);
+    for(let i=0;i<400;i++){ const ts=tasksForDate(d); if(ts.length===0){d.setDate(d.getDate()-1);continue;} if(ts.every(t=>t.done))cur++; else break; d.setDate(d.getDate()-1); } }
+  // best streak over the last ~200 days
+  let run=0,best=0;
+  { const d=new Date(today); d.setDate(d.getDate()-200);
+    for(let i=0;i<=200;i++){ const st=statusOf(d); if(st==="done"){run++; if(run>best)best=run;} else if(st==="missed"){run=0;} d.setDate(d.getDate()+1); } }
+
+  return(
+    <div className="streak-board">
+      <div className="sb-title">🔥 STREAK HISTORY</div>
+      <div className="sb-head">
+        <div className="sb-stat"><span className="sb-stat-num">🔥 {cur}</span><span className="sb-stat-lbl">CURRENT</span></div>
+        <div className="sb-stat"><span className="sb-stat-num">🏆 {best}</span><span className="sb-stat-lbl">BEST</span></div>
+      </div>
+      <div className="sb-grid">
+        {DAYS_SHORT.map(d=><div className="sb-dow" key={d}>{d[0]}</div>)}
+        {cells.map(({d,st},i)=>(
+          <div key={i} className={`sb-cell sb-${st}`} title={`${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})} — ${st==="done"?"streak day ✓":st==="missed"?"missed":st==="today"?"today (in progress)":st==="rest"?"rest day":"upcoming"}`}>{d.getDate()}</div>
+        ))}
+      </div>
+      <div className="sb-legend">
+        <span><i className="sb-dot sb-done"/>Streak</span>
+        <span><i className="sb-dot sb-missed"/>Missed</span>
+        <span><i className="sb-dot sb-rest"/>Rest</span>
+        <span><i className="sb-dot sb-today"/>Today</span>
+      </div>
+    </div>
+  );
+}
+
+// ── ACCOUNT / SETTINGS (password reset, email verify, export, delete) ──
+function SettingsModal({ user, username, onUsername, exportData, onClose }){
+  const[msg,setMsg]=useState("");
+  const[busy,setBusy]=useState(false);
+  const[confirmDel,setConfirmDel]=useState(false);
+  const[uname,setUname]=useState(username||"");
+  function changeName(v){ setUname(v); onUsername(v); }
+
+  function exportJson(){
+    try{
+      const payload={exportedAt:new Date().toISOString(),account:user.email,...exportData};
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download=`studystack-${(user.email||"data").replace(/[^a-z0-9]/gi,"_")}.json`;
+      document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+      SFX.click();setMsg("✓ Your data has been downloaded as a JSON file.");
+    }catch(e){setMsg("Couldn't export: "+(e.message||e));}
+  }
+  async function resetPw(){
+    setBusy(true);setMsg("");
+    try{ await sendPasswordResetEmail(auth,user.email); setMsg(`✓ Password reset email sent to ${user.email}.`); }
+    catch(e){ setMsg("Error: "+(e.message||e).replace("Firebase: ","")); }
+    setBusy(false);
+  }
+  async function verify(){
+    setBusy(true);setMsg("");
+    try{ await sendEmailVerification(user); setMsg("✓ Verification email sent. If it's not in your inbox, check your Spam / Promotions folder and mark it 'Not spam'."); }
+    catch(e){ setMsg("Error: "+(e.message||e).replace("Firebase: ","")); }
+    setBusy(false);
+  }
+  async function reallyDelete(){
+    setBusy(true);setMsg("");
+    try{
+      await deleteDoc(doc(db,"users",user.uid,"data","weeks"));
+      await deleteUser(user);
+      try{ await clearIndexedDbPersistence(db); }catch(_){}
+      window.location.reload();
+    }catch(e){
+      if((e.code||"").includes("requires-recent-login")){
+        setMsg("For security, please SIGN OUT, sign in again, then delete. (Recent login required.)");
+      }else{
+        setMsg("Error: "+(e.message||e).replace("Firebase: ",""));
+      }
+      setBusy(false);
+    }
+  }
+
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal fade-in">
+        <div className="modal-title">👤 ACCOUNT</div>
+        <div className="acct-email">{user.email}{user.emailVerified?<span className="acct-verified"> ✓ VERIFIED</span>:<span className="acct-unverified"> • UNVERIFIED</span>}</div>
+
+        <div className="acct-uname-field">
+          <label className="modal-label">USERNAME</label>
+          <input className="modal-input" placeholder="Pick a username" value={uname} maxLength={24} onChange={e=>changeName(e.target.value)}/>
+          <div className="acct-row-desc" style={{marginTop:6}}>This is how you're greeted in the app. Saves automatically.</div>
+        </div>
+
+        <div className="acct-row">
+          <div className="acct-row-info"><div className="acct-row-title">Export my data</div><div className="acct-row-desc">Download everything we store about you as JSON.</div></div>
+          <button className="acct-btn" onClick={exportJson} disabled={busy}>EXPORT</button>
+        </div>
+        {!user.emailVerified&&(
+          <div className="acct-row">
+            <div className="acct-row-info"><div className="acct-row-title">Verify email</div><div className="acct-row-desc">Confirm your address. The email may land in Spam/Promotions — mark it "Not spam".</div></div>
+            <button className="acct-btn" onClick={verify} disabled={busy}>VERIFY</button>
+          </div>
+        )}
+        <div className="acct-row">
+          <div className="acct-row-info"><div className="acct-row-title">Reset password</div><div className="acct-row-desc">We'll email you a reset link.</div></div>
+          <button className="acct-btn" onClick={resetPw} disabled={busy}>RESET</button>
+        </div>
+        <div className="acct-row danger">
+          <div className="acct-row-info"><div className="acct-row-title">Delete account</div><div className="acct-row-desc">Permanently erase your account and all data. Cannot be undone.</div></div>
+          {!confirmDel
+            ? <button className="acct-btn del" onClick={()=>{SFX.tap();setConfirmDel(true);}} disabled={busy}>DELETE</button>
+            : <button className="acct-btn del" onClick={reallyDelete} disabled={busy}>{busy?"…":"CONFIRM"}</button>}
+        </div>
+        {confirmDel&&!busy&&<div className="acct-warn">⚠ Tap CONFIRM to permanently delete. This wipes your tasks, study history, and motivation data.</div>}
+
+        {msg&&<div className="acct-msg">{msg}</div>}
+        <div className="acct-legal"><a href={`${process.env.PUBLIC_URL}/privacy.html`} target="_blank" rel="noreferrer">Privacy Policy</a> · <a href={`${process.env.PUBLIC_URL}/terms.html`} target="_blank" rel="noreferrer">Terms of Service</a> · <a href={`mailto:${OWNER_EMAIL}`}>Contact</a></div>
+        <div className="modal-actions">
+          <button className="modal-cancel" onClick={onClose}>CLOSE</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN ──
 export default function App(){
   const now=new Date();const todayDow=now.getDay();const currentWeekKey=getWeekKey(now);
@@ -575,11 +1121,20 @@ export default function App(){
   const[allWeeks,setAllWeeks]=useState({[currentWeekKey]:DEFAULT_TASKS});
   const[studyLog,setStudyLog]=useState({});
   const[keptWeeks,setKeptWeeks]=useState({});
-  const[view,setView]=useState("home"); // home | tasks | study
+  const[motivation,setMotivation]=useState({name:"",quotes:[]});
+  const[username,setUsername]=useState("");
+  const[lockInLog,setLockInLog]=useState([]);
+  const[entryQuote,setEntryQuote]=useState(null);
+  const shownEntry=useRef(false);
+  // Lock In state — restored from localStorage so a reload can't escape the lock.
+  const[lockStart,setLockStart]=useState(()=>{try{const e=+(localStorage.getItem("sq_lockin_end")||0);return e>Date.now()?+(localStorage.getItem("sq_lockin_start")||0):0;}catch(e){return 0;}});
+  const[lockEnd,setLockEnd]=useState(()=>{try{const e=+(localStorage.getItem("sq_lockin_end")||0);return e>Date.now()?e:0;}catch(e){return 0;}});
+  const[view,setView]=useState("home"); // home | tasks | study | lockin | motivation
   const[activeWeek,setActiveWeek]=useState(currentWeekKey);
   const[openDay,setOpenDay]=useState(todayDow);const[editDay,setEditDay]=useState(null);
   const[newLabels,setNewLabels]=useState({});const[newTypes,setNewTypes]=useState({});
   const[popId,setPopId]=useState(null);const[showModal,setShowModal]=useState(null);const[syncing,setSyncing]=useState(false);
+  const[showSettings,setShowSettings]=useState(false);
   const[themeKey,setThemeKey]=useState(()=>{const t=localStorage.getItem("sq_theme");return THEMES[t]?t:"retrowave";});
   const[soundOn,setSoundOnState]=useState(SOUND_ON);
   function toggleSound(){const v=!soundOn;setSoundOn(v);setSoundOnState(v);if(v)SFX.click();}
@@ -604,11 +1159,17 @@ export default function App(){
         setAllWeeks(aw);
         setStudyLog(d.studyLog||{});
         setKeptWeeks(d.keptWeeks||{});
+        setMotivation(d.motivation||{name:"",quotes:[]});
+        setUsername(d.username||"");
+        setLockInLog(d.lockInLog||[]);
       }else{
         // brand new account — seed defaults once
         setAllWeeks({[currentWeekKey]:DEFAULT_TASKS});
         setStudyLog({});
-        setDoc(ref,{allWeeks:{[currentWeekKey]:DEFAULT_TASKS},studyLog:{},keptWeeks:{}});
+        setMotivation({name:"",quotes:[]});
+        setUsername("");
+        setLockInLog([]);
+        setDoc(ref,{allWeeks:{[currentWeekKey]:DEFAULT_TASKS},studyLog:{},keptWeeks:{},motivation:{name:"",quotes:[]},username:"",lockInLog:[]});
       }
       loadedForUid.current=user.uid;
       setSyncing(false);
@@ -628,10 +1189,10 @@ export default function App(){
         const hasAny=Object.values(wk||{}).some(arr=>Array.isArray(arr)&&arr.length>0);
         if(k===currentWeekKey||k===activeWeek||keptWeeks[k]||hasAny) pruned[k]=wk;
       }
-      try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks:pruned,studyLog,keptWeeks});}catch(e){console.error(e);}
+      try{await setDoc(doc(db,"users",user.uid,"data","weeks"),{allWeeks:pruned,studyLog,keptWeeks,motivation,username,lockInLog});}catch(e){console.error(e);}
       setSyncing(false);
     },800);
-  },[allWeeks,studyLog,keptWeeks,user,activeWeek,currentWeekKey]);
+  },[allWeeks,studyLog,keptWeeks,motivation,username,lockInLog,user,activeWeek,currentWeekKey]);
   // When entering TASKS view, smoothly scroll today's card into view.
   useEffect(()=>{
     if(view==="tasks"){
@@ -709,10 +1270,51 @@ export default function App(){
   function handleMultiAdd(label,days,repeat){SFX.add();days.forEach(dow=>updateDay(dow,ts=>[...ts,{id:uid(),label,repeat,done:false}]));}
   function saveStudy(secs){const d=dateStr(new Date());setStudyLog(prev=>({...prev,[d]:(prev[d]||0)+secs}));}
 
+  // ── LOCK IN controls ──
+  function startLockIn(ms){
+    const s=Date.now(), e=s+ms;
+    try{ localStorage.setItem("sq_lockin_start",String(s)); localStorage.setItem("sq_lockin_end",String(e)); }catch(_){}
+    setLockStart(s); setLockEnd(e); setView("home");
+  }
+  function endLockIn(){
+    try{ localStorage.removeItem("sq_lockin_start"); localStorage.removeItem("sq_lockin_end"); }catch(_){}
+    try{ document.fullscreenElement&&document.exitFullscreen(); }catch(_){}
+    setLockStart(0); setLockEnd(0);
+  }
+  function recordGiveUp(trxId){
+    setLockInLog(prev=>[...prev,{trxId,amount:LOCKIN_FEE,at:new Date().toISOString()}]);
+    endLockIn();
+  }
+
+  // Savage entry popup — shown once per app load if a rival name is set.
+  useEffect(()=>{
+    if(user && motivation && motivation.name && !shownEntry.current){
+      shownEntry.current=true;
+      setEntryQuote(pickQuote(motivation.name, motivation.quotes));
+    }
+  },[user,motivation]);
+  const entryPopup = entryQuote && (
+    <div className="mv-pop-overlay" onClick={e=>e.target===e.currentTarget&&setEntryQuote(null)}>
+      <div className="mv-pop">
+        <div className="mv-pop-emoji">😈</div>
+        <div className="mv-pop-quote">{entryQuote}</div>
+        <button className="mv-pop-btn" onClick={()=>{SFX.click();setEntryQuote(null);}}>LET'S GO →</button>
+      </div>
+    </div>
+  );
+  const settingsModal = showSettings && user && (
+    <SettingsModal user={user} username={username} onUsername={setUsername} exportData={{username,allWeeks,studyLog,keptWeeks,motivation,lockInLog}} onClose={()=>setShowSettings(false)}/>
+  );
+
   const sceneBlock=<><div className="scene"><Scene themeKey={themeKey}/></div><div className="retro-scanlines"/><div className="retro-vignette"/></>;
 
   if(!authReady)return(<><style>{CSS}</style>{sceneBlock}<div className="loading">LOADING...</div></>);
   if(!user)return(<><style>{CSS}</style>{sceneBlock}<AuthScreen/></>);
+
+  // ── LOCK IN active: take over the whole screen, nothing else renders ──
+  if(lockEnd>Date.now()){
+    return(<><style>{CSS}</style>{sceneBlock}<LockOverlay start={lockStart||lockEnd-1} end={lockEnd} motivation={motivation} onComplete={endLockIn} onGiveUp={recordGiveUp}/></>);
+  }
 
   // ── HOME ──
   if(view==="home"){
@@ -721,10 +1323,11 @@ export default function App(){
     const totalToday=(allWeeks[currentWeekKey]?.[todayDow]||[]).length;
     return(
       <>
-        <style>{CSS}</style>{sceneBlock}
+        <style>{CSS}</style>{sceneBlock}{entryPopup}{settingsModal}
         <div className="controls-bar">
           <div style={{flex:1}}/>
           <button className="sound-toggle" onClick={toggleSound} title={soundOn?"Sound on":"Sound off"}>{soundOn?"\uD83D\uDD0A":"\uD83D\uDD07"}</button>
+          <button className="acct-link-btn" onClick={()=>{SFX.click();setShowSettings(true);}} title="Account">\ud83d\udc64 ACCOUNT</button>
           <div className="theme-wrap">
             {Object.entries(THEMES).map(([key,t])=>(
               <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>
@@ -734,8 +1337,8 @@ export default function App(){
         </div>
         <div className="home">
           <div className="home-hero">
-            <div className="home-logo">STUDY STACK</div>
-            <div className="home-sub">CHOOSE YOUR MODE</div>
+            <CyberLogo className="home-cyber"/>
+            <div className="home-sub">{username?`WELCOME BACK, ${username.toUpperCase()}`:"CHOOSE YOUR MODE"}</div>
             <div className="home-streak">
               <span className={`streak-badge${streak===0?" cold":""}`}>
                 <span className="flame">🔥</span>{streak===0?"NO STREAK — DO TODAY'S TASKS":`${streak} DAY STREAK`}
@@ -761,7 +1364,26 @@ export default function App(){
               </div>
               <div className="home-card-arrow">→</div>
             </div>
+            <div className="home-card" onClick={()=>{SFX.click();setView("lockin");}}>
+              <div className="home-card-icon">🔒</div>
+              <div className="home-card-body">
+                <div className="home-card-title">LOCK IN</div>
+                <div className="home-card-desc">Commit to a countdown. Screen locks &amp; stays awake — bail early only by donating {LOCKIN_FEE}tk.</div>
+                <div className="home-stat">{lockInLog.length>0?`${lockInLog.length} GIVE-UP${lockInLog.length!==1?"S":""} LOGGED`:"NEVER GIVEN UP"}</div>
+              </div>
+              <div className="home-card-arrow">→</div>
+            </div>
+            <div className="home-card" onClick={()=>{SFX.click();setView("motivation");}}>
+              <div className="home-card-icon">😈</div>
+              <div className="home-card-body">
+                <div className="home-card-title">MOTIVATION</div>
+                <div className="home-card-desc">Name a rival and get roasted into studying every time you open the app.</div>
+                <div className="home-stat">{motivation.name?`RIVAL: ${motivation.name.toUpperCase()}`:"NO RIVAL SET"}</div>
+              </div>
+              <div className="home-card-arrow">→</div>
+            </div>
           </div>
+          <StreakBoard tasksForDate={tasksForDate}/>
         </div>
       </>
     );
@@ -771,7 +1393,7 @@ export default function App(){
   if(view==="study"){
     return(
       <>
-        <style>{CSS}</style>{sceneBlock}
+        <style>{CSS}</style>{sceneBlock}{entryPopup}
         <div className="hdr">
           <div className="hdr-left">
             <button className="back-btn" onClick={()=>{SFX.tap();setView("home");}}>←</button>
@@ -784,10 +1406,44 @@ export default function App(){
     );
   }
 
+  // ── LOCK IN (setup) ──
+  if(view==="lockin"){
+    return(
+      <>
+        <style>{CSS}</style>{sceneBlock}{entryPopup}
+        <div className="hdr">
+          <div className="hdr-left">
+            <button className="back-btn" onClick={()=>{SFX.tap();setView("home");}}>←</button>
+            <div><div className="hdr-title">LOCK IN</div><div className="hdr-sub">COMMITMENT MODE</div></div>
+          </div>
+          <div className="hdr-right"><span className={`sync-badge${syncing?" syncing":""}`}>{syncing?"SYNCING...":"● SYNCED"}</span></div>
+        </div>
+        <LockSetupView onStart={startLockIn}/>
+      </>
+    );
+  }
+
+  // ── MOTIVATION ──
+  if(view==="motivation"){
+    return(
+      <>
+        <style>{CSS}</style>{sceneBlock}{entryPopup}
+        <div className="hdr">
+          <div className="hdr-left">
+            <button className="back-btn" onClick={()=>{SFX.tap();setView("home");}}>←</button>
+            <div><div className="hdr-title">MOTIVATION</div><div className="hdr-sub">RIVAL &amp; ROASTS</div></div>
+          </div>
+          <div className="hdr-right"><span className={`sync-badge${syncing?" syncing":""}`}>{syncing?"SYNCING...":"● SYNCED"}</span></div>
+        </div>
+        <MotivationView motivation={motivation} onSave={setMotivation}/>
+      </>
+    );
+  }
+
   // ── TASKS ──
   return(
     <>
-      <style>{CSS}</style>{sceneBlock}
+      <style>{CSS}</style>{sceneBlock}{entryPopup}{settingsModal}
       {showModal!==null&&<MultiDayModal defaultDow={showModal} onClose={()=>setShowModal(null)} onAdd={handleMultiAdd}/>}
       <div className="app">
         <div className="hdr">
@@ -797,7 +1453,7 @@ export default function App(){
               <div className="hdr-title">TASKS</div>
               <div className="hdr-sub">WEEKLY ROUTINE</div>
               <div style={{marginTop:6}}><span className={`streak-badge${streak===0?" cold":""}`}><span className="flame">🔥</span>{streak===0?"NO STREAK":`${streak} DAY`}</span></div>
-              <div className="hdr-user">{user.email}</div>
+              <div className="hdr-user">{username?`@${username}`:user.email}</div>
             </div>
           </div>
           <div className="hdr-right">
@@ -809,6 +1465,7 @@ export default function App(){
         <div className="controls-bar">
           <div style={{flex:1}}/>
           <button className="sound-toggle" onClick={toggleSound} title={soundOn?"Sound on":"Sound off"}>{soundOn?"\uD83D\uDD0A":"\uD83D\uDD07"}</button>
+          <button className="acct-link-btn" onClick={()=>{SFX.click();setShowSettings(true);}} title="Account">\ud83d\udc64 ACCOUNT</button>
           <div className="theme-wrap">
             {Object.entries(THEMES).map(([key,t])=>(
               <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>
