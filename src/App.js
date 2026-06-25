@@ -197,7 +197,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .home{position:relative;z-index:2;max-width:540px;margin:0 auto;padding:40px 20px;min-height:calc(100vh - 0px);display:flex;flex-direction:column;}
 .home-hero{text-align:center;margin-bottom:36px;animation:float 3.5s ease-in-out infinite;}
 .home-logo{font-family:'Orbitron',monospace;font-size:30px;font-weight:900;letter-spacing:5px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 22px var(--accent));}
-.home-sub{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:5px;margin-top:6px;}
+.home-sub{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--accent3);letter-spacing:4px;margin-top:8px;text-shadow:0 0 10px var(--accent3);}
 .home-cards{display:flex;flex-direction:column;gap:16px;}
 .home-card{
   border:1px solid var(--bord2);border-radius:20px;padding:28px 24px;cursor:pointer;
@@ -526,10 +526,10 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .cyber-logo{display:inline-flex;flex-direction:column;align-items:center;font-family:'Orbitron',monospace;font-weight:900;line-height:0.86;text-align:center;user-select:none;}
 .cyber-logo .cl-line{display:block;position:relative;letter-spacing:10px;padding-left:10px;}
 .cyber-logo .cl-line+.cl-line{margin-top:2px;}
-.cyber-logo .cl-main{position:relative;background:linear-gradient(180deg,#9affff 0%,#22e0ff 32%,#c45bff 68%,#ff2d9b 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(34,224,255,0.55)) drop-shadow(0 0 30px rgba(255,45,155,0.35));}
+.cyber-logo .cl-main{position:relative;background:linear-gradient(180deg,var(--accent3) 0%,var(--accent) 45%,var(--accent2) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px var(--accent)) drop-shadow(0 0 30px var(--accent2));}
 .cyber-logo .cl-glitch{position:absolute;left:10px;top:0;opacity:0;pointer-events:none;}
-.cyber-logo .cl-glitch.r{color:#ff2d9b;-webkit-text-fill-color:#ff2d9b;text-shadow:0 0 8px #ff2d9b;animation:clGlitchR 3.2s infinite;}
-.cyber-logo .cl-glitch.c{color:#22e0ff;-webkit-text-fill-color:#22e0ff;text-shadow:0 0 8px #22e0ff;animation:clGlitchC 3.9s infinite;}
+.cyber-logo .cl-glitch.r{color:var(--accent);-webkit-text-fill-color:var(--accent);text-shadow:0 0 8px var(--accent);animation:clGlitchR 3.2s infinite;}
+.cyber-logo .cl-glitch.c{color:var(--accent3);-webkit-text-fill-color:var(--accent3);text-shadow:0 0 8px var(--accent3);animation:clGlitchC 3.9s infinite;}
 @keyframes clGlitchR{0%,88%,100%{opacity:0;transform:translate(0,0);}89%{opacity:0.75;transform:translate(-3px,1px);}92%{opacity:0.55;transform:translate(2px,-1px);}95%{opacity:0;}}
 @keyframes clGlitchC{0%,90%,100%{opacity:0;transform:translate(0,0);}91%{opacity:0.7;transform:translate(3px,-1px);}94%{opacity:0.5;transform:translate(-2px,1px);}97%{opacity:0;}}
 .home-cyber{font-size:46px;}
@@ -542,19 +542,19 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .sb-head{display:flex;gap:22px;justify-content:center;margin-bottom:16px;}
 .sb-stat{display:flex;flex-direction:column;align-items:center;}
 .sb-stat-num{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--accent);text-shadow:0 0 12px var(--accent);}
-.sb-stat-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-top:3px;}
-.sb-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-.sb-dow{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--dim);text-align:center;padding-bottom:3px;}
-.sb-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:10px;border:1px solid var(--border);color:var(--dimmer);transition:transform 0.12s;}
+.sb-stat-lbl{font-family:'Share Tech Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text);margin-top:3px;}
+.sb-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.sb-dow{font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent3);text-align:center;padding-bottom:4px;}
+.sb-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:12px;font-weight:600;border:1px solid var(--border);color:var(--dim);transition:transform 0.12s;}
 .sb-cell:hover{transform:scale(1.12);}
 .sb-done{background:rgba(61,255,143,0.85);color:#04140d;border-color:var(--green);box-shadow:0 0 8px rgba(61,255,143,0.5);font-weight:700;}
 .sb-missed{background:rgba(255,64,96,0.18);border-color:rgba(255,64,96,0.5);color:rgba(255,150,165,0.9);}
 .sb-rest{background:rgba(255,255,255,0.03);color:var(--dimmer);}
 .sb-today{border-color:var(--accent);box-shadow:0 0 8px var(--accent);color:var(--accent);font-weight:700;}
 .sb-future{opacity:0.22;}
-.sb-legend{display:flex;gap:14px;justify-content:center;margin-top:15px;flex-wrap:wrap;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--dim);}
-.sb-legend span{display:flex;align-items:center;gap:5px;}
-.sb-dot{width:11px;height:11px;border-radius:3px;display:inline-block;}
+.sb-legend{display:flex;gap:16px;justify-content:center;margin-top:16px;flex-wrap:wrap;font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;color:var(--text);}
+.sb-legend span{display:flex;align-items:center;gap:6px;}
+.sb-dot{width:13px;height:13px;border-radius:3px;display:inline-block;}
 `;
 
 // ── SCENE (unchanged rich canvas) ──
@@ -1073,7 +1073,7 @@ function SettingsModal({ user, username, onUsername, exportData, onClose }){
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal fade-in">
-        <div className="modal-title">👤 ACCOUNT</div>
+        <div className="modal-title">ACCOUNT</div>
         <div className="acct-email">{user.email}{user.emailVerified?<span className="acct-verified"> ✓ VERIFIED</span>:<span className="acct-unverified"> • UNVERIFIED</span>}</div>
 
         <div className="acct-uname-field">
@@ -1327,7 +1327,7 @@ export default function App(){
         <div className="controls-bar">
           <div style={{flex:1}}/>
           <button className="sound-toggle" onClick={toggleSound} title={soundOn?"Sound on":"Sound off"}>{soundOn?"\uD83D\uDD0A":"\uD83D\uDD07"}</button>
-          <button className="acct-link-btn" onClick={()=>{SFX.click();setShowSettings(true);}} title="Account">\ud83d\udc64 ACCOUNT</button>
+          <button className="acct-link-btn" onClick={()=>{SFX.click();setShowSettings(true);}} title="Account">ACCOUNT</button>
           <div className="theme-wrap">
             {Object.entries(THEMES).map(([key,t])=>(
               <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>
@@ -1364,6 +1364,15 @@ export default function App(){
               </div>
               <div className="home-card-arrow">→</div>
             </div>
+            <div className="home-card" onClick={()=>{SFX.click();setView("streak");}}>
+              <div className="home-card-icon">🔥</div>
+              <div className="home-card-body">
+                <div className="home-card-title">STREAK</div>
+                <div className="home-card-desc">See which days you kept your streak. Current &amp; best.</div>
+                <div className="home-stat">{streak>0?`🔥 ${streak} DAY STREAK`:"NO STREAK YET"}</div>
+              </div>
+              <div className="home-card-arrow">→</div>
+            </div>
             <div className="home-card" onClick={()=>{SFX.click();setView("lockin");}}>
               <div className="home-card-icon">🔒</div>
               <div className="home-card-body">
@@ -1383,7 +1392,6 @@ export default function App(){
               <div className="home-card-arrow">→</div>
             </div>
           </div>
-          <StreakBoard tasksForDate={tasksForDate}/>
         </div>
       </>
     );
@@ -1419,6 +1427,23 @@ export default function App(){
           <div className="hdr-right"><span className={`sync-badge${syncing?" syncing":""}`}>{syncing?"SYNCING...":"● SYNCED"}</span></div>
         </div>
         <LockSetupView onStart={startLockIn}/>
+      </>
+    );
+  }
+
+  // ── STREAK ──
+  if(view==="streak"){
+    return(
+      <>
+        <style>{CSS}</style>{sceneBlock}{entryPopup}{settingsModal}
+        <div className="hdr">
+          <div className="hdr-left">
+            <button className="back-btn" onClick={()=>{SFX.tap();setView("home");}}>←</button>
+            <div><div className="hdr-title">STREAK</div><div className="hdr-sub">YOUR PROGRESS</div></div>
+          </div>
+          <div className="hdr-right"><span className={`sync-badge${syncing?" syncing":""}`}>{syncing?"SYNCING...":"● SYNCED"}</span></div>
+        </div>
+        <div className="study-wrap fade-in"><StreakBoard tasksForDate={tasksForDate}/></div>
       </>
     );
   }
@@ -1465,7 +1490,7 @@ export default function App(){
         <div className="controls-bar">
           <div style={{flex:1}}/>
           <button className="sound-toggle" onClick={toggleSound} title={soundOn?"Sound on":"Sound off"}>{soundOn?"\uD83D\uDD0A":"\uD83D\uDD07"}</button>
-          <button className="acct-link-btn" onClick={()=>{SFX.click();setShowSettings(true);}} title="Account">\ud83d\udc64 ACCOUNT</button>
+          <button className="acct-link-btn" onClick={()=>{SFX.click();setShowSettings(true);}} title="Account">ACCOUNT</button>
           <div className="theme-wrap">
             {Object.entries(THEMES).map(([key,t])=>(
               <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>

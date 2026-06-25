@@ -1,0 +1,47 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a0533"/>
+      <stop offset="0.5" stop-color="#3a0a4a"/>
+      <stop offset="1" stop-color="#0c0018"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff0a8"/>
+      <stop offset="0.45" stop-color="#ff9a3c"/>
+      <stop offset="1" stop-color="#e0316a"/>
+    </linearGradient>
+    <linearGradient id="bar1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7afcff"/><stop offset="1" stop-color="#13b8ff"/></linearGradient>
+    <linearGradient id="bar2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d77bff"/><stop offset="1" stop-color="#8a3bff"/></linearGradient>
+    <linearGradient id="bar3" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff5bbf"/><stop offset="1" stop-color="#ff2d7a"/></linearGradient>
+    <clipPath id="round"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+  <g clip-path="url(#round)">
+    <rect width="512" height="512" fill="url(#sky)"/>
+
+    <!-- retro sun -->
+    <circle cx="256" cy="196" r="112" fill="url(#sun)"/>
+    <!-- sun scan stripes -->
+    <g fill="#1a0533">
+      <rect x="120" y="214" width="272" height="9"/>
+      <rect x="116" y="232" width="280" height="12"/>
+      <rect x="112" y="254" width="288" height="15"/>
+    </g>
+
+    <!-- horizon grid -->
+    <g stroke="#ff2d9b" stroke-width="3">
+      <line x1="0" y1="332" x2="512" y2="332" opacity="0.55"/>
+      <line x1="0" y1="356" x2="512" y2="356" opacity="0.35"/>
+      <line x1="256" y1="332" x2="-120" y2="512" opacity="0.30"/>
+      <line x1="256" y1="332" x2="150" y2="512" opacity="0.30"/>
+      <line x1="256" y1="332" x2="362" y2="512" opacity="0.30"/>
+      <line x1="256" y1="332" x2="632" y2="512" opacity="0.30"/>
+    </g>
+
+    <!-- stacked neon bars (the "stack") -->
+    <g stroke="#0c0018" stroke-width="4">
+      <rect x="150" y="368" width="212" height="34" rx="9" fill="url(#bar1)"/>
+      <rect x="126" y="410" width="260" height="34" rx="9" fill="url(#bar2)"/>
+      <rect x="102" y="452" width="308" height="34" rx="9" fill="url(#bar3)"/>
+    </g>
+  </g>
+</svg>
