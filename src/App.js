@@ -121,6 +121,41 @@ const SAVAGE_QUOTES = [
   "You vs {name}. Right now, {name} is winning.",
   "{name} stayed consistent. That's the whole secret.",
   "One day {name} will thank past {name}. Will you?",
+  "{name} is three chapters ahead. You're three reels deep.",
+  "{name} doesn't feel like studying either. {name} does it anyway.",
+  "While you 'take a quick break,' {name} took the lead.",
+  "{name} will walk into that exam calm. You'll walk in praying.",
+  "{name} earned their grade. You're hoping for luck.",
+  "The gap between you and {name} is growing. You're choosing it.",
+  "{name} is outworking you while you read this. Close the app.",
+  "{name} doesn't post about studying. {name} just studies.",
+  "Excuses sound great until {name} passes and you don't.",
+  "{name} put in the hours. The result won't be a surprise.",
+  "You'll remember this wasted hour when {name} gets the offer.",
+  "{name} is tired too. {name} is just tougher about it.",
+  "{name} treats studying like a job. You treat it like a maybe.",
+  "Every 'tomorrow' you take, {name} already did today.",
+  "{name} isn't gifted. {name} is just relentless.",
+  "{name} silenced their phone two hours ago. Yours is in your hand.",
+  "Future you is begging you to be more like {name}.",
+  "{name} doesn't wait for motivation. {name} starts.",
+  "You and {name} had the same 24 hours. Look at the difference.",
+  "{name} is building momentum. You're building a snooze streak.",
+  "When the results come out, 'I was busy' won't beat {name}.",
+  "{name} chose the hard thing today. You chose comfort.",
+  "{name} is locked in. You're locked out — of your own potential.",
+  "Talent loses to {name}'s consistency every single time.",
+  "{name} doesn't need to be told twice. Why do you?",
+  "The version of you that beats {name} starts studying now.",
+  "{name} already forgot they didn't feel like it. So can you.",
+  "While you negotiate with yourself, {name} is already done.",
+  "{name} will deserve the win. Make sure you do too.",
+  "Nobody's coming to save your grade. {name} figured that out.",
+  "{name} grinds quietly and wins loudly. Be that.",
+  "You scrolled past your future. {name} is living theirs.",
+  "{name} turned 'I can't' into 'watch me.' Your turn.",
+  "Discipline beats mood. {name} knows it. Do you?",
+  "{name} is one step closer. You're one excuse behind.",
 ];
 function fillQuote(raw,name){ return (raw||"").replace(/\{name\}/g, name||"They"); }
 function pickQuote(name, extra){
@@ -172,7 +207,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 @keyframes popIn{0%{opacity:0;transform:scale(0.8);}100%{opacity:1;transform:scale(1);}}
 
 .app{position:relative;z-index:2;min-height:100vh;max-width:540px;width:100%;margin:0 auto;padding-bottom:80px;overflow-x:hidden;}
-.hdr{padding:24px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:rgba(6,3,12,0.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
+.hdr{padding:calc(24px + env(safe-area-inset-top)) 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:rgba(6,3,12,0.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
 .hdr-left{display:flex;align-items:center;gap:12px;min-width:0;}
 .back-btn{background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--accent);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
 .back-btn:hover{border-color:var(--accent);box-shadow:0 0 10px var(--accent);}
@@ -181,7 +216,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .hdr-user{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--accent2);letter-spacing:1px;margin-top:3px;}
 .hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
 
-.controls-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 20px;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+.controls-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:calc(10px + env(safe-area-inset-top)) 20px 10px;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
 .theme-wrap{display:flex;gap:4px;}
 .theme-chip{background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:14px;transition:all 0.15s;position:relative;}
 .theme-chip:hover{border-color:var(--bord2);transform:scale(1.1);}
@@ -260,7 +295,7 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .sh-weektotal{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent3);text-align:right;margin-bottom:14px;}
 
 /* week nav + stack (tasks view) */
-.week-nav{display:flex;align-items:center;gap:2px;padding:12px 16px 0;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:sticky;top:103px;z-index:40;}
+.week-nav{display:flex;align-items:center;gap:2px;padding:12px 16px 0;background:rgba(6,3,12,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:sticky;top:calc(103px + env(safe-area-inset-top));z-index:40;}
 .week-tabs{display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;scroll-behavior:smooth;}
 .week-tabs::-webkit-scrollbar{display:none;}
 .week-step{flex-shrink:0;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:7px;width:30px;height:30px;margin:2px 4px;cursor:pointer;color:var(--accent);font-size:12px;transition:all 0.15s;}
@@ -420,6 +455,9 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .streak-badge .flame{font-size:13px;filter:drop-shadow(0 0 4px #ff7a18);}
 .streak-badge.cold{background:rgba(120,120,140,0.12);border-color:rgba(150,150,170,0.3);color:rgba(200,200,220,0.6);box-shadow:none;}
 .streak-badge.cold .flame{filter:grayscale(1);opacity:0.5;}
+.streak-btn{cursor:pointer;transition:all 0.15s;}
+.streak-btn:hover{filter:brightness(1.15);transform:scale(1.06);box-shadow:0 0 16px rgba(255,122,24,0.4);}
+.streak-btn.cold:hover{box-shadow:0 0 12px rgba(150,150,170,0.35);}
 .home-streak{display:flex;justify-content:center;margin-top:14px;}
 .loading{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Orbitron',monospace;font-size:12px;letter-spacing:4px;color:var(--accent);}
 
@@ -526,10 +564,10 @@ html,body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--tex
 .cyber-logo{display:inline-flex;flex-direction:column;align-items:center;font-family:'Orbitron',monospace;font-weight:900;line-height:0.86;text-align:center;user-select:none;}
 .cyber-logo .cl-line{display:block;position:relative;letter-spacing:10px;padding-left:10px;}
 .cyber-logo .cl-line+.cl-line{margin-top:2px;}
-.cyber-logo .cl-main{position:relative;background:linear-gradient(180deg,var(--accent3) 0%,var(--accent) 45%,var(--accent2) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px var(--accent)) drop-shadow(0 0 30px var(--accent2));}
+.cyber-logo .cl-main{position:relative;background:linear-gradient(180deg,#9affff 0%,#22e0ff 32%,#c45bff 68%,#ff2d9b 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(34,224,255,0.55)) drop-shadow(0 0 30px rgba(255,45,155,0.35));}
 .cyber-logo .cl-glitch{position:absolute;left:10px;top:0;opacity:0;pointer-events:none;}
-.cyber-logo .cl-glitch.r{color:var(--accent);-webkit-text-fill-color:var(--accent);text-shadow:0 0 8px var(--accent);animation:clGlitchR 3.2s infinite;}
-.cyber-logo .cl-glitch.c{color:var(--accent3);-webkit-text-fill-color:var(--accent3);text-shadow:0 0 8px var(--accent3);animation:clGlitchC 3.9s infinite;}
+.cyber-logo .cl-glitch.r{color:#ff2d9b;-webkit-text-fill-color:#ff2d9b;text-shadow:0 0 8px #ff2d9b;animation:clGlitchR 3.2s infinite;}
+.cyber-logo .cl-glitch.c{color:#22e0ff;-webkit-text-fill-color:#22e0ff;text-shadow:0 0 8px #22e0ff;animation:clGlitchC 3.9s infinite;}
 @keyframes clGlitchR{0%,88%,100%{opacity:0;transform:translate(0,0);}89%{opacity:0.75;transform:translate(-3px,1px);}92%{opacity:0.55;transform:translate(2px,-1px);}95%{opacity:0;}}
 @keyframes clGlitchC{0%,90%,100%{opacity:0;transform:translate(0,0);}91%{opacity:0.7;transform:translate(3px,-1px);}94%{opacity:0.5;transform:translate(-2px,1px);}97%{opacity:0;}}
 .home-cyber{font-size:46px;}
@@ -1328,6 +1366,9 @@ export default function App(){
           <div style={{flex:1}}/>
           <button className="sound-toggle" onClick={toggleSound} title={soundOn?"Sound on":"Sound off"}>{soundOn?"\uD83D\uDD0A":"\uD83D\uDD07"}</button>
           <button className="acct-link-btn" onClick={()=>{SFX.click();setShowSettings(true);}} title="Account">ACCOUNT</button>
+          <button className={`streak-badge streak-btn${streak===0?" cold":""}`} onClick={()=>{SFX.click();setView("streak");}} title="View your streak">
+            <span className="flame">🔥</span>{streak===0?"0":streak}
+          </button>
           <div className="theme-wrap">
             {Object.entries(THEMES).map(([key,t])=>(
               <div key={key} className={`theme-chip${themeKey===key?" active":""}`} onClick={()=>{SFX.theme();setThemeKey(key);}}>{t.icon}<span className="theme-tip">{t.name}</span></div>
@@ -1339,11 +1380,6 @@ export default function App(){
           <div className="home-hero">
             <CyberLogo className="home-cyber"/>
             <div className="home-sub">{username?`WELCOME BACK, ${username.toUpperCase()}`:"CHOOSE YOUR MODE"}</div>
-            <div className="home-streak">
-              <span className={`streak-badge${streak===0?" cold":""}`}>
-                <span className="flame">🔥</span>{streak===0?"NO STREAK — DO TODAY'S TASKS":`${streak} DAY STREAK`}
-              </span>
-            </div>
           </div>
           <div className="home-cards">
             <div className="home-card" onClick={()=>{SFX.click();setView("tasks");}}>
@@ -1361,15 +1397,6 @@ export default function App(){
                 <div className="home-card-title">STUDY</div>
                 <div className="home-card-desc">Start the timer and focus. Track your hours.</div>
                 <div className="home-stat">TODAY: {fmtDuration(studyLog[today]||0)}</div>
-              </div>
-              <div className="home-card-arrow">→</div>
-            </div>
-            <div className="home-card" onClick={()=>{SFX.click();setView("streak");}}>
-              <div className="home-card-icon">🔥</div>
-              <div className="home-card-body">
-                <div className="home-card-title">STREAK</div>
-                <div className="home-card-desc">See which days you kept your streak. Current &amp; best.</div>
-                <div className="home-stat">{streak>0?`🔥 ${streak} DAY STREAK`:"NO STREAK YET"}</div>
               </div>
               <div className="home-card-arrow">→</div>
             </div>
@@ -1477,7 +1504,7 @@ export default function App(){
             <div>
               <div className="hdr-title">TASKS</div>
               <div className="hdr-sub">WEEKLY ROUTINE</div>
-              <div style={{marginTop:6}}><span className={`streak-badge${streak===0?" cold":""}`}><span className="flame">🔥</span>{streak===0?"NO STREAK":`${streak} DAY`}</span></div>
+              <div style={{marginTop:6}}><button className={`streak-badge streak-btn${streak===0?" cold":""}`} onClick={()=>{SFX.click();setView("streak");}} title="View your streak"><span className="flame">🔥</span>{streak===0?"NO STREAK":`${streak} DAY`}</button></div>
               <div className="hdr-user">{username?`@${username}`:user.email}</div>
             </div>
           </div>
