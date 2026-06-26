@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>STUDY STACK — Launch Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#ff2d9b; --accent2:#c45bff; --accent3:#22e0ff;
+    --green:#3dff8f; --yellow:#ffd84d; --ink:#ffffff; --dim:rgba(255,255,255,0.55);
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:#000;overflow:hidden;}
+  body{display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;}
+
+  /* 9:16 fixed design stage, scaled to fit the window */
+  #stage{
+    position:relative;width:1080px;height:1920px;background:#000;overflow:hidden;
+    transform-origin:center center;
+  }
+
+  /* ── ambient background ── */
+  .bg-glow{position:absolute;inset:-20%;pointer-events:none;}
+  .glow{position:absolute;border-radius:50%;filter:blur(120px);opacity:0.55;mix-blend-mode:screen;}
+  .glow.a{width:760px;height:760px;background:var(--accent);left:-12%;top:8%;animation:drift1 22s var(--ease) infinite alternate;}
+  .glow.b{width:680px;height:680px;background:var(--accent2);right:-14%;top:34%;animation:drift2 26s var(--ease) infinite alternate;}
+  .glow.c{width:620px;height:620px;background:var(--accent3);left:18%;bottom:-10%;animation:drift3 24s var(--ease) infinite alternate;}
+  @keyframes drift1{to{transform:translate(120px,90px) scale(1.15);}}
+  @keyframes drift2{to{transform:translate(-110px,70px) scale(1.1);}}
+  @keyframes drift3{to{transform:translate(80px,-120px) scale(1.12);}}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:0.05;
+    background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px);mix-blend-mode:overlay;}
+  .vignette{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,0.85) 100%);}
+  .grid{position:absolute;left:0;right:0;bottom:0;height:46%;pointer-events:none;opacity:0.18;
+    background:
+      linear-gradient(transparent 0,#000 92%),
+      repeating-linear-gradient(0deg,transparent 0 78px,rgba(255,45,155,0.5) 78px 80px),
+      repeating-linear-gradient(90deg,transparent 0 78px,rgba(34,224,255,0.35) 78px 80px);
+    transform:perspective(700px) rotateX(64deg);transform-origin:bottom center;
+    -webkit-mask-image:linear-gradient(transparent,#000 40%);mask-image:linear-gradient(transparent,#000 40%);}
+
+  /* ── scenes ── */
+  .scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:0 130px;text-align:center;opacity:0;transition:opacity .9s var(--ease);will-change:opacity;}
+  .scene.active{opacity:1;}
+
+  .kicker{font-family:'Share Tech Mono',monospace;font-size:26px;letter-spacing:9px;color:var(--dim);
+    text-transform:uppercase;margin-bottom:40px;opacity:0;}
+  .scene.active .kicker{animation:rise 1s var(--ease) .15s both;}
+
+  .headline{font-family:'Rajdhani',sans-serif;font-weight:300;color:var(--ink);font-size:96px;line-height:1.05;
+    letter-spacing:-0.5px;}
+  .headline b{font-weight:700;}
+  .accentword{background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 30px rgba(255,45,155,.45));font-weight:700;}
+
+  .line{display:block;opacity:0;}
+  .scene.active .line{animation:rise 1.1s var(--ease) both;}
+  .scene.active .line:nth-child(1){animation-delay:.25s;}
+  .scene.active .line:nth-child(2){animation-delay:.55s;}
+
+  @keyframes rise{from{opacity:0;transform:translateY(46px);filter:blur(8px);}to{opacity:1;transform:none;filter:blur(0);}}
+  @keyframes pop{0%{opacity:0;transform:scale(.6);}60%{transform:scale(1.08);}100%{opacity:1;transform:scale(1);}}
+
+  /* ── Scene 1: logo ── */
+  .brand{font-family:'Orbitron',monospace;font-weight:900;font-size:120px;letter-spacing:10px;line-height:1;
+    background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 50px rgba(255,45,155,.5));opacity:0;}
+  .scene.active .brand{animation:brandIn 1.6s var(--ease) .2s both;}
+  @keyframes brandIn{0%{opacity:0;transform:scale(.82);letter-spacing:40px;filter:blur(14px) drop-shadow(0 0 0 transparent);}
+    100%{opacity:1;transform:scale(1);letter-spacing:10px;filter:blur(0) drop-shadow(0 0 50px rgba(255,45,155,.5));}}
+  .brandsub{margin-top:46px;font-family:'Share Tech Mono',monospace;font-size:30px;letter-spacing:14px;color:var(--dim);opacity:0;}
+  .scene.active .brandsub{animation:rise 1.1s var(--ease) 1.1s both;}
+
+  /* ── Scene 3: day stack ── */
+  .stackwrap{display:flex;flex-direction:column;gap:26px;width:100%;max-width:760px;margin-top:30px;}
+  .daycard{display:flex;align-items:center;gap:30px;padding:40px 44px;border-radius:28px;
+    background:rgba(18,10,30,0.6);border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter:blur(14px);opacity:0;}
+  .scene.active .daycard{animation:slideIn 1s var(--ease) both;}
+  .scene.active .daycard:nth-child(1){animation-delay:.35s;}
+  .scene.active .daycard:nth-child(2){animation-delay:.55s;}
+  .scene.active .daycard:nth-child(3){animation-delay:.75s;}
+  @keyframes slideIn{from{opacity:0;transform:translateX(70px);}to{opacity:1;transform:none;}}
+  .daybox{width:96px;height:96px;border-radius:18px;flex-shrink:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;border:1px solid rgba(255,45,155,.35);background:rgba(0,0,0,.4);}
+  .daybox .d{font-family:'Share Tech Mono',monospace;font-size:20px;letter-spacing:3px;color:var(--accent);}
+  .daybox .n{font-family:'Orbitron',monospace;font-size:38px;font-weight:700;color:#fff;}
+  .dayinfo{flex:1;text-align:left;}
+  .dayname{font-family:'Orbitron',monospace;font-weight:700;font-size:40px;color:#fff;letter-spacing:1px;}
+  .daymeta{font-family:'Share Tech Mono',monospace;font-size:24px;color:var(--dim);margin-top:8px;}
+  .check{width:64px;height:64px;border-radius:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:38px;color:#000;background:var(--green);box-shadow:0 0 30px rgba(61,255,143,.5);opacity:0;}
+  .scene.active .check{animation:pop .6s var(--ease) both;}
+  .scene.active .daycard:nth-child(1) .check{animation-delay:1.15s;}
+  .scene.active .daycard:nth-child(2) .check{animation-delay:1.45s;}
+  .scene.active .daycard:nth-child(3) .check{animation-delay:1.75s;}
+
+  /* ── Scene 4: timer ── */
+  .ring{width:560px;height:560px;position:relative;margin-top:20px;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring .bg{fill:none;stroke:rgba(255,255,255,.1);stroke-width:14;}
+  .ring .fg{fill:none;stroke:url(#grad);stroke-width:14;stroke-linecap:round;
+    stroke-dasharray:1583;stroke-dashoffset:1583;filter:drop-shadow(0 0 16px var(--accent));}
+  .scene.active .ring .fg{animation:fill 3.4s var(--ease) .4s forwards;}
+  @keyframes fill{to{stroke-dashoffset:360;}}
+  .ringtxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .clock{font-family:'Orbitron',monospace;font-weight:700;font-size:120px;color:#fff;text-shadow:0 0 30px var(--accent);}
+  .clocklbl{font-family:'Share Tech Mono',monospace;font-size:26px;letter-spacing:8px;color:var(--accent);margin-top:14px;}
+
+  /* ── Scene 5: streak ── */
+  .flame{font-size:230px;line-height:1;filter:drop-shadow(0 0 60px rgba(255,140,40,.6));opacity:0;}
+  .scene.active .flame{animation:pop .9s var(--ease) .3s both, flicker 1.4s ease-in-out 1.2s infinite;}
+  @keyframes flicker{0%,100%{transform:scale(1) rotate(0);}50%{transform:scale(1.05) rotate(-1.5deg);}}
+  .streaknum{font-family:'Orbitron',monospace;font-weight:900;font-size:200px;line-height:1;margin-top:10px;
+    background:linear-gradient(90deg,#ffd84d,#ff7a18);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 40px rgba(255,122,24,.4));}
+  .streaklbl{font-family:'Share Tech Mono',monospace;font-size:34px;letter-spacing:12px;color:var(--dim);margin-top:14px;}
+
+  /* ── Scene 6: themes ── */
+  .themes{display:flex;flex-direction:column;gap:24px;width:100%;max-width:800px;margin-top:50px;}
+  .theme{position:relative;display:flex;align-items:center;gap:34px;padding:32px 44px;border-radius:26px;
+    background:var(--tb);border:1px solid var(--ta);box-shadow:0 0 46px -14px var(--ta),inset 0 0 40px rgba(255,255,255,0.03);
+    overflow:hidden;opacity:0;}
+  .theme::before{content:'';position:absolute;inset:0;
+    background:linear-gradient(120deg,var(--ta) 0%,transparent 55%);opacity:0.14;pointer-events:none;}
+  .scene.active .theme{animation:slideIn .8s var(--ease) both;}
+  .scene.active .theme:nth-child(1){animation-delay:.45s;}
+  .scene.active .theme:nth-child(2){animation-delay:.65s;}
+  .scene.active .theme:nth-child(3){animation-delay:.85s;}
+  .scene.active .theme:nth-child(4){animation-delay:1.05s;}
+  .scene.active .theme:nth-child(5){animation-delay:1.25s;}
+  .ticon{font-size:74px;line-height:1;flex-shrink:0;filter:drop-shadow(0 0 18px var(--ta));z-index:1;}
+  .tname{flex:1;text-align:left;font-family:'Orbitron',monospace;font-weight:700;font-size:48px;letter-spacing:4px;z-index:1;
+    background:linear-gradient(90deg,var(--ta),var(--tc),var(--td));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .tswatch{width:130px;height:26px;border-radius:13px;flex-shrink:0;z-index:1;
+    background:linear-gradient(90deg,var(--ta),var(--tc),var(--td));box-shadow:0 0 22px -4px var(--ta);}
+
+  /* ── Scene 7: close ── */
+  .closebrand{font-family:'Orbitron',monospace;font-weight:900;font-size:96px;letter-spacing:8px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 40px rgba(255,45,155,.5));opacity:0;}
+  .scene.active .closebrand{animation:rise 1.1s var(--ease) .25s both;}
+  .avail{margin-top:50px;font-family:'Rajdhani',sans-serif;font-weight:300;font-size:64px;color:#fff;opacity:0;}
+  .scene.active .avail{animation:rise 1.1s var(--ease) .6s both;}
+  .url{margin-top:30px;font-family:'Share Tech Mono',monospace;font-size:30px;letter-spacing:4px;color:var(--accent3);opacity:0;}
+  .scene.active .url{animation:rise 1.1s var(--ease) .9s both;}
+
+  /* progress ticks */
+  .progress{position:absolute;bottom:64px;left:0;right:0;display:flex;justify-content:center;gap:14px;z-index:5;}
+  .tick{width:54px;height:6px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden;}
+  .tick i{display:block;height:100%;width:0;background:#fff;}
+  .tick.on i{width:100%;transition:width linear;}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="bg-glow"><div class="glow a"></div><div class="glow b"></div><div class="glow c"></div></div>
+    <div class="grid"></div>
+    <div class="grain"></div>
+    <div class="vignette"></div>
+
+    <!-- 1: LOGO -->
+    <section class="scene" data-dur="4000">
+      <div class="brand">STUDY<br>STACK</div>
+      <div class="brandsub">WEEKLY ROUTINE TRACKER</div>
+    </section>
+
+    <!-- 2: TAGLINE -->
+    <section class="scene" data-dur="3400">
+      <h1 class="headline">
+        <span class="line">Your week.</span>
+        <span class="line"><span class="accentword">Stacked.</span></span>
+      </h1>
+    </section>
+
+    <!-- 3: ORGANIZED -->
+    <section class="scene" data-dur="4400">
+      <div class="kicker">Every day, organized</div>
+      <div class="stackwrap">
+        <div class="daycard"><div class="daybox"><span class="d">MON</span><span class="n">22</span></div>
+          <div class="dayinfo"><div class="dayname">Monday</div><div class="daymeta">3 of 3 done</div></div>
+          <div class="check">✓</div></div>
+        <div class="daycard"><div class="daybox"><span class="d">TUE</span><span class="n">23</span></div>
+          <div class="dayinfo"><div class="dayname">Tuesday</div><div class="daymeta">2 of 2 done</div></div>
+          <div class="check">✓</div></div>
+        <div class="daycard"><div class="daybox"><span class="d">WED</span><span class="n">24</span></div>
+          <div class="dayinfo"><div class="dayname">Wednesday</div><div class="daymeta">3 of 3 done</div></div>
+          <div class="check">✓</div></div>
+      </div>
+    </section>
+
+    <!-- 4: FOCUS TIMER -->
+    <section class="scene" data-dur="4400">
+      <div class="kicker">Focus, measured</div>
+      <div class="ring">
+        <svg width="560" height="560" viewBox="0 0 560 560">
+          <defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ff2d9b"/><stop offset="0.5" stop-color="#c45bff"/><stop offset="1" stop-color="#22e0ff"/>
+          </linearGradient></defs>
+          <circle class="bg" cx="280" cy="280" r="252"/>
+          <circle class="fg" cx="280" cy="280" r="252"/>
+        </svg>
+        <div class="ringtxt"><div class="clock" data-count="clock">00:00</div><div class="clocklbl">● STUDYING</div></div>
+      </div>
+    </section>
+
+    <!-- 5: STREAK -->
+    <section class="scene" data-dur="3800">
+      <div class="kicker">Keep the fire going</div>
+      <div class="flame">🔥</div>
+      <div class="streaknum" data-count="streak">0</div>
+      <div class="streaklbl">DAY STREAK</div>
+    </section>
+
+    <!-- 6: THEMES -->
+    <section class="scene" data-dur="5400">
+      <div class="kicker">Five worlds to study in</div>
+      <div class="themes">
+        <div class="theme" style="--tb:#10001f;--ta:#ff2d9b;--tc:#c45bff;--td:#22e0ff">
+          <span class="ticon">🌆</span><span class="tname">RETROWAVE</span><span class="tswatch"></span></div>
+        <div class="theme" style="--tb:#03060e;--ta:#13f0ff;--tc:#ff2e88;--td:#ffe138">
+          <span class="ticon">🏙️</span><span class="tname">CYBERPUNK</span><span class="tswatch"></span></div>
+        <div class="theme" style="--tb:#01100f;--ta:#2bffc6;--tc:#8a6bff;--td:#ff7ab5">
+          <span class="ticon">🌌</span><span class="tname">AURORA</span><span class="tswatch"></span></div>
+        <div class="theme" style="--tb:#1a0500;--ta:#ff7a18;--tc:#ff2d55;--td:#ffd23f">
+          <span class="ticon">🔥</span><span class="tname">INFERNO</span><span class="tswatch"></span></div>
+        <div class="theme" style="--tb:#070612;--ta:#b89cff;--tc:#6c52d6;--td:#ffd76a">
+          <span class="ticon">🌙</span><span class="tname">MIDNIGHT</span><span class="tswatch"></span></div>
+      </div>
+    </section>
+
+    <!-- 7: CLOSE -->
+    <section class="scene" data-dur="4800">
+      <div class="closebrand">STUDY STACK</div>
+      <div class="avail">Available now.</div>
+      <div class="url">nabilxhasan.github.io/studystack</div>
+    </section>
+
+    <div class="progress"></div>
+  </div>
+
+<script>
+(function(){
+  var CAPTURE = location.search.indexOf('capture')>=0;
+  var stage=document.getElementById('stage');
+  function fit(){
+    var s=Math.min(window.innerWidth/1080, window.innerHeight/1920);
+    stage.style.transform='scale('+s+')';
+  }
+  window.addEventListener('resize',fit); fit();
+
+  var scenes=[].slice.call(document.querySelectorAll('.scene'));
+  var durs=scenes.map(function(s){return parseInt(s.dataset.dur,10)||4000;});
+  var starts=[], acc=0;
+  durs.forEach(function(d){starts.push(acc);acc+=d;});
+  var TOTAL=acc;
+
+  // progress ticks
+  var prog=document.querySelector('.progress');
+  var ticks=scenes.map(function(){
+    var t=document.createElement('div');t.className='tick';t.innerHTML='<i></i>';prog.appendChild(t);return t;
+  });
+
+  function fmtClock(sec){var m=Math.floor(sec/60),s=Math.floor(sec%60);return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;}
+  function counterValue(type,elapsed){
+    var cfg = type==='clock' ? {delay:400,dur:3000,target:92} : {delay:600,dur:1100,target:14};
+    var p=Math.min(Math.max((elapsed-cfg.delay)/cfg.dur,0),1);
+    var val=Math.round((1-Math.pow(1-p,3))*cfg.target);
+    return type==='clock' ? fmtClock(val) : String(val);
+  }
+
+  // ── LIVE PLAYBACK ──
+  var counters=[];
+  function clearCounters(){counters.forEach(function(id){cancelAnimationFrame(id);});counters=[];}
+  function runCount(el,type){
+    var start=null, dur = type==='clock'?3000:1100;
+    function step(ts){ if(!start)start=ts;
+      var e=ts-start; el.textContent=counterValue(type,(type==='clock'?400:600)+e);
+      if(e<dur)counters.push(requestAnimationFrame(step)); }
+    counters.push(requestAnimationFrame(step));
+  }
+  var i=-1,timer=null;
+  function show(idx){
+    clearCounters();
+    scenes.forEach(function(s,k){s.classList.toggle('active',k===idx);});
+    ticks.forEach(function(t,k){
+      var fill=t.querySelector('i');
+      if(k<idx){t.classList.add('on');fill.style.transition='none';fill.style.width='100%';}
+      else if(k===idx){t.classList.remove('on');fill.style.transition='none';fill.style.width='0';
+        void fill.offsetWidth; fill.style.transition='width '+durs[idx]+'ms linear'; fill.style.width='100%';}
+      else{t.classList.remove('on');fill.style.transition='none';fill.style.width='0';}
+    });
+    var c=scenes[idx].querySelector('[data-count]');
+    if(c){var type=c.dataset.count;var delay=type==='clock'?400:600;
+      setTimeout(function(){if(i===idx)runCount(c,type);},delay);}
+  }
+  function next(){ i=(i+1)%scenes.length; show(i); timer=setTimeout(next,durs[i]); }
+
+  // ── DETERMINISTIC CAPTURE ──
+  // Render the exact visual state at absolute time T (ms) in the loop, with all
+  // animations paused so a headless browser can screenshot frame-by-frame.
+  function seek(T){
+    T=((T%TOTAL)+TOTAL)%TOTAL;
+    var idx=0; while(idx<durs.length-1 && T>=starts[idx]+durs[idx]) idx++;
+    var sceneStart=starts[idx], local=T-sceneStart;
+    scenes.forEach(function(s,k){s.classList.toggle('active',k===idx);});
+    void stage.offsetWidth; // flush styles so animations exist
+    // continuous background drift
+    document.querySelectorAll('.glow').forEach(function(g){
+      g.getAnimations().forEach(function(a){a.pause();a.currentTime=T;});
+    });
+    // entrance animations within the active scene all start at sceneStart
+    scenes[idx].getAnimations({subtree:true}).forEach(function(a){a.pause();a.currentTime=local;});
+    var c=scenes[idx].querySelector('[data-count]');
+    if(c)c.textContent=counterValue(c.dataset.count,local);
+    ticks.forEach(function(t,k){var f=t.querySelector('i');f.style.transition='none';
+      f.style.width = k<idx?'100%':k>idx?'0%':(Math.min(local/durs[idx],1)*100)+'%';});
+  }
+
+  if(CAPTURE){
+    var st=document.createElement('style');
+    st.textContent='*{animation-play-state:paused!important}.scene{transition:none!important}';
+    document.head.appendChild(st);
+    window.__total=TOTAL;
+    window.__seek=seek;
+    seek(0);
+  } else {
+    next();
+  }
+})();
+</script>
+</body>
+</html>
