@@ -9,7 +9,10 @@
    syncs them when you reconnect — so we deliberately DO NOT intercept Firebase /
    Google API requests here and let Firebase manage them. */
 
-const CACHE = "studystack-v1";
+// Bump this string on every deploy that changes the app shell. Because browsers
+// only re-install a service worker when this FILE changes byte-for-byte, a new
+// version here is what forces the update + purges the previous cache (below).
+const CACHE = "studystack-v2";
 
 // Best-effort precache of the app shell. `cache.addAll` fails the whole install
 // if any single URL 404s, so we add each individually and ignore failures.
@@ -53,9 +56,11 @@ self.addEventListener("fetch", (event) => {
 
   // Page navigations: network-first (so you get the latest app when online),
   // falling back to the cached shell so the app still opens with no connection.
+  // `cache: "no-store"` bypasses the browser HTTP cache so a stale index.html
+  // (GitHub Pages caches HTML ~10 min) can't pin you to an old bundle.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-store" })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((cache) => cache.put(req, copy));
