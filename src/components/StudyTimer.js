@@ -3,14 +3,18 @@ import { formatClock, formatDuration } from "../utils/storage";
 
 export default function StudyTimer({
   activeSession,
-  onUpdateSession,
-  onCompleteSession,
+  onStartSession,
+  onPauseSession,
+  onResumeSession,
+  onResetSession,
+  onAddMinutes,
+  onFinishSession,
   onMarkTaskCompleted,
   routineSchedule = [],
   sfx,
   initialFocusMode = false
 }) {
-  // Current subject and bound task
+  // Configurable subject and target before starting
   const [selectedSubject, setSelectedSubject] = useState(
     activeSession?.subject || "General Study"
   );
@@ -23,25 +27,39 @@ export default function StudyTimer({
   const [customMinutesInput, setCustomMinutesInput] = useState("");
   const [showCustomTarget, setShowCustomTarget] = useState(false);
 
-  // Timer running state & numbers
-  const [isRunning, setIsRunning] = useState(activeSession ? !activeSession.isPaused : false);
-  const [isPaused, setIsPaused] = useState(activeSession ? activeSession.isPaused : false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(activeSession?.elapsedSeconds || 0);
-  const [remainingSeconds, setRemainingSeconds] = useState(
-    activeSession?.remainingSeconds !== undefined
-      ? activeSession.remainingSeconds
-      : (targetMinutes * 60)
-  );
-  const [completionModal, setCompletionModal] = useState(null);
-
   // Fullscreen Focus Study Mode
   const [isFocusMode, setIsFocusMode] = useState(initialFocusMode);
+  const [completionModal, setCompletionModal] = useState(null);
 
-  const startWallTimestampRef = useRef(null);
-  const tickIntervalRef = useRef(null);
   const wakeLockRef = useRef(null);
 
-  // Screen Wake Lock to prevent sleep while studying
+  // Sync selection if activeSession exists or changes
+  useEffect(() => {
+    if (activeSession) {
+      if (activeSession.subject) setSelectedSubject(activeSession.subject);
+      if (activeSession.taskId !== undefined) setBoundTaskId(activeSession.taskId);
+      if (activeSession.targetSeconds) {
+        setTargetMinutes(Math.round(activeSession.targetSeconds / 60));
+      }
+      if (activeSession.isCompleted && !completionModal) {
+        setCompletionModal({
+          taskId: activeSession.taskId,
+          subject: activeSession.subject,
+          secondsStudied: activeSession.elapsedSeconds
+        });
+      }
+    }
+  }, [activeSession, completionModal]);
+
+  // Derived state directly from lifted activeSession in App.js
+  const isRunning = activeSession ? !activeSession.isPaused : false;
+  const isPaused = activeSession ? activeSession.isPaused : false;
+  const elapsedSeconds = activeSession?.elapsedSeconds || 0;
+  const remainingSeconds = activeSession?.remainingSeconds !== undefined
+    ? activeSession.remainingSeconds
+    : (targetMinutes * 60);
+
+  // Screen Wake Lock (with safe try/catch for iOS Chrome / Safari)
   useEffect(() => {
     if (!isRunning) {
       if (wakeLockRef.current) {
@@ -55,7 +73,7 @@ export default function StudyTimer({
     async function requestLock() {
       if (cancelled || wakeLockRef.current) return;
       try {
-        if ("wakeLock" in navigator) {
+        if ("wakeLock" in navigator && typeof navigator.wakeLock.request === "function") {
           wakeLockRef.current = await navigator.wakeLock.request("screen");
         }
       } catch (e) {}
@@ -77,133 +95,34 @@ export default function StudyTimer({
     };
   }, [isRunning]);
 
-  // Sync state if activeSession changes externally
-  useEffect(() => {
-    if (!activeSession) return;
-    setSelectedSubject(activeSession.subject || "General Study");
-    setBoundTaskId(activeSession.taskId || null);
-    setIsRunning(!activeSession.isPaused);
-    setIsPaused(activeSession.isPaused);
-    setElapsedSeconds(activeSession.elapsedSeconds || 0);
-    setRemainingSeconds(activeSession.remainingSeconds !== undefined ? activeSession.remainingSeconds : 0);
-
-    if (activeSession.targetSeconds) {
-      setTargetMinutes(Math.round(activeSession.targetSeconds / 60));
-    }
-
-    if (!activeSession.isPaused && activeSession.lastUpdatedTimestamp) {
-      const deltaSecs = Math.floor((Date.now() - activeSession.lastUpdatedTimestamp) / 1000);
-      if (deltaSecs > 0) {
-        const newElapsed = (activeSession.elapsedSeconds || 0) + deltaSecs;
-        const newRemaining = Math.max(0, (activeSession.remainingSeconds || 0) - deltaSecs);
-        setElapsedSeconds(newElapsed);
-        setRemainingSeconds(newRemaining);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSession]);
-
-  // Main tick loop
-  useEffect(() => {
-    if (isRunning && !isPaused) {
-      startWallTimestampRef.current = Date.now();
-      tickIntervalRef.current = setInterval(() => {
-        setElapsedSeconds((prevElapsed) => {
-          const newElapsed = prevElapsed + 1;
-          setRemainingSeconds((prevRem) => {
-            const newRem = Math.max(0, prevRem - 1);
-            onUpdateSession?.({
-              taskId: boundTaskId,
-              subject: selectedSubject,
-              targetSeconds: targetMinutes * 60,
-              elapsedSeconds: newElapsed,
-              remainingSeconds: newRem,
-              isPaused: false
-            });
-
-            if (targetMinutes > 0 && newRem === 0 && prevRem > 0) {
-              handleTimerCompleted(newElapsed);
-            }
-            return newRem;
-          });
-          return newElapsed;
-        });
-      }, 1000);
-    } else {
-      if (tickIntervalRef.current) {
-        clearInterval(tickIntervalRef.current);
-        tickIntervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (tickIntervalRef.current) {
-        clearInterval(tickIntervalRef.current);
-        tickIntervalRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning, isPaused, boundTaskId, selectedSubject, targetMinutes]);
-
   function handleStart() {
     sfx?.start?.();
-    setIsRunning(true);
-    setIsPaused(false);
-    onUpdateSession?.({
+    onStartSession?.({
       taskId: boundTaskId,
       subject: selectedSubject,
-      targetSeconds: targetMinutes * 60,
-      elapsedSeconds,
-      remainingSeconds,
-      isPaused: false
+      targetSeconds: targetMinutes * 60
     });
   }
 
   function handlePause() {
     sfx?.stop?.();
-    setIsPaused(true);
-    onUpdateSession?.({
-      taskId: boundTaskId,
-      subject: selectedSubject,
-      targetSeconds: targetMinutes * 60,
-      elapsedSeconds,
-      remainingSeconds,
-      isPaused: true
-    });
+    onPauseSession?.();
   }
 
   function handleResume() {
     sfx?.start?.();
-    setIsPaused(false);
-    onUpdateSession?.({
-      taskId: boundTaskId,
-      subject: selectedSubject,
-      targetSeconds: targetMinutes * 60,
-      elapsedSeconds,
-      remainingSeconds,
-      isPaused: false
-    });
+    onResumeSession?.();
   }
 
   function handleReset() {
     sfx?.undo?.();
-    setIsRunning(false);
-    setIsPaused(false);
-    setElapsedSeconds(0);
-    setRemainingSeconds(targetMinutes * 60);
-    onUpdateSession?.(null);
+    onResetSession?.();
   }
 
-  function handleTimerCompleted(finalElapsedSeconds) {
-    sfx?.win?.();
-    setIsRunning(false);
-    setIsPaused(false);
-    onCompleteSession?.(finalElapsedSeconds, boundTaskId, selectedSubject);
-    setCompletionModal({
-      taskId: boundTaskId,
-      subject: selectedSubject,
-      secondsStudied: finalElapsedSeconds
-    });
+  function handleAddFiveMinutes() {
+    sfx?.add?.();
+    onAddMinutes?.(5);
+    setTargetMinutes((prev) => prev + 5);
   }
 
   function handleMarkAsFinished() {
@@ -212,7 +131,13 @@ export default function StudyTimer({
         return;
       }
     }
-    handleTimerCompleted(elapsedSeconds);
+    sfx?.win?.();
+    onFinishSession?.(elapsedSeconds, boundTaskId, selectedSubject);
+    setCompletionModal({
+      taskId: boundTaskId,
+      subject: selectedSubject,
+      secondsStudied: elapsedSeconds
+    });
   }
 
   function handleConfirmCompletionTask() {
@@ -223,27 +148,27 @@ export default function StudyTimer({
     handleReset();
   }
 
+  // Safe Fullscreen Handler with iOS WebKit graceful fallback
   function toggleFullscreenFocus(enable) {
     setIsFocusMode(enable);
     if (enable) {
       try {
         const el = document.documentElement;
-        const fn = el.requestFullscreen || el.webkitRequestFullscreen;
-        fn && fn.call(el);
+        if (el && typeof el.requestFullscreen === "function") {
+          el.requestFullscreen().catch(() => {});
+        } else if (el && typeof el.webkitRequestFullscreen === "function") {
+          el.webkitRequestFullscreen();
+        }
       } catch (e) {}
     } else {
       try {
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
+        if (document.fullscreenElement && typeof document.exitFullscreen === "function") {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitFullscreenElement && typeof document.webkitExitFullscreen === "function") {
+          document.webkitExitFullscreen();
         }
       } catch (e) {}
     }
-  }
-
-  function addFiveMinutes() {
-    setRemainingSeconds((prev) => prev + 300);
-    setTargetMinutes((prev) => prev + 5);
-    sfx?.add?.();
   }
 
   const boundTask = routineSchedule.find((t) => t.id === boundTaskId);
@@ -312,7 +237,7 @@ export default function StudyTimer({
                 </button>
               )}
 
-              <button className="focus-secondary-btn" onClick={addFiveMinutes} title="Add 5 minutes">
+              <button className="focus-secondary-btn" onClick={handleAddFiveMinutes} title="Add 5 minutes">
                 +5m
               </button>
 
@@ -423,7 +348,6 @@ export default function StudyTimer({
               disabled={isRunning || isPaused}
               onClick={() => {
                 setTargetMinutes(mins);
-                setRemainingSeconds(mins * 60);
                 setShowCustomTarget(false);
               }}
             >
@@ -458,7 +382,6 @@ export default function StudyTimer({
                 const m = parseInt(customMinutesInput, 10);
                 if (m > 0) {
                   setTargetMinutes(m);
-                  setRemainingSeconds(m * 60);
                 }
               }}
             >

@@ -218,7 +218,7 @@ a:hover {
 
 @media (max-width: 768px) {
   .main-content-wrap {
-    padding: 16px 14px calc(80px + env(safe-area-inset-bottom));
+    padding: 16px 14px calc(110px + env(safe-area-inset-bottom));
   }
 }
 
@@ -522,6 +522,10 @@ a:hover {
 .study-focus-overlay {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   z-index: 99999;
   background: #050609;
   display: flex;
@@ -839,7 +843,7 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s, opacity 0.2s;
 }
 .task-card:hover {
   border-color: rgba(0, 245, 255, 0.4);
@@ -849,6 +853,13 @@ a:hover {
   border-color: rgba(0, 255, 157, 0.4);
   box-shadow: 0 0 16px rgba(0, 255, 157, 0.15);
   background: var(--success-soft);
+}
+.task-card.locked {
+  opacity: 0.72;
+}
+.task-card.locked:hover {
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .task-info-left {
@@ -901,24 +912,102 @@ a:hover {
   font-weight: 800;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   box-shadow: 0 0 14px var(--accent-glow);
   transition: all 0.2s;
+  white-space: nowrap;
 }
-.study-task-btn:hover {
+.study-task-btn:hover:not(:disabled) {
   background: #ffffff;
   box-shadow: 0 0 22px var(--accent-glow);
   transform: translateY(-1px);
 }
+.study-task-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 .status-dropdown-btn {
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg-surface-raised);
   color: var(--text);
   font-size: 12px;
   font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.status-dropdown-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── iOS Chrome & Mobile Task Card Proportions ── */
+@media (max-width: 640px) {
+  .task-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .task-card > div:first-child {
+    width: 100%;
+  }
+
+  .task-actions-right {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: stretch;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .study-task-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+
+  .status-dropdown-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 24px 9px 10px;
+    font-size: 12px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    text-align: center;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+  }
+}
+
+/* ── 00:00 AM Midnight Cutoff Banner ── */
+.past-day-locked-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warning);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.past-day-locked-banner strong {
+  color: var(--warning);
 }
 
 /* ── 52H MASTER TIMETABLE ── */
@@ -1547,3 +1636,132 @@ a:hover {
   flex-direction: column;
   gap: 16px;
 }
+
+/* ── ANIME & CYBERPUNK CUSTOM MOUSE CURSOR ── */
+@media (pointer: fine) {
+  body, button, a, [role="button"], .day-pill-btn, .mobile-nav-item, .brand-section {
+    cursor: none !important;
+  }
+  input, textarea {
+    cursor: text;
+  }
+}
+
+.custom-cursor-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999999;
+  overflow: hidden;
+}
+
+.custom-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  margin-top: -16px;
+  margin-left: -16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--neon-cyan);
+  box-shadow: 0 0 12px var(--neon-cyan), inset 0 0 8px rgba(0, 245, 255, 0.25);
+  pointer-events: none;
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.custom-cursor-ring.hovered {
+  width: 46px;
+  height: 46px;
+  margin-top: -23px;
+  margin-left: -23px;
+  border-color: var(--neon-emerald);
+  box-shadow: 0 0 20px var(--neon-emerald), inset 0 0 12px rgba(0, 255, 157, 0.3);
+}
+
+.custom-cursor-ring.clicking {
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  margin-left: -12px;
+  border-color: var(--neon-magenta);
+  box-shadow: 0 0 20px var(--neon-magenta);
+}
+
+/* Cyber Crosshairs */
+.cursor-crosshair {
+  position: absolute;
+  background: var(--neon-cyan);
+  transition: background 0.2s;
+}
+.custom-cursor-ring.hovered .cursor-crosshair {
+  background: var(--neon-emerald);
+}
+.custom-cursor-ring.clicking .cursor-crosshair {
+  background: var(--neon-magenta);
+}
+
+.cursor-crosshair.ch-top {
+  top: -4px;
+  left: 50%;
+  width: 2px;
+  height: 4px;
+  transform: translateX(-50%);
+}
+.cursor-crosshair.ch-bottom {
+  bottom: -4px;
+  left: 50%;
+  width: 2px;
+  height: 4px;
+  transform: translateX(-50%);
+}
+.cursor-crosshair.ch-left {
+  left: -4px;
+  top: 50%;
+  width: 4px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+.cursor-crosshair.ch-right {
+  right: -4px;
+  top: 50%;
+  width: 4px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.custom-cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  margin-left: -3px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--neon-cyan);
+  pointer-events: none;
+  transition: background 0.2s, box-shadow 0.2s;
+  will-change: transform;
+}
+.custom-cursor-dot.hovered {
+  background: var(--neon-emerald);
+  box-shadow: 0 0 10px var(--neon-emerald);
+}
+.custom-cursor-dot.clicking {
+  background: var(--neon-magenta);
+  box-shadow: 0 0 12px var(--neon-magenta);
+}
+
+@media (pointer: coarse) {
+  .custom-cursor-container {
+    display: none !important;
+  }
+}
+

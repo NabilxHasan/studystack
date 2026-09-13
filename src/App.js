@@ -10,10 +10,12 @@ import {
 } from "firebase/auth";
 import {
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   doc,
   setDoc,
   onSnapshot,
-  enableIndexedDbPersistence,
   terminate,
   clearIndexedDbPersistence
 } from "firebase/firestore";
@@ -47,10 +49,11 @@ import RoutineTable from "./components/RoutineTable";
 import StudyTimer from "./components/StudyTimer";
 import StreakView from "./components/StreakView";
 import ActiveTimerBanner from "./components/ActiveTimerBanner";
+import CustomCursor from "./components/CustomCursor";
 
 import "./App.css";
 
-// ── FIREBASE CONFIGURATION ──
+// ── FIREBASE CONFIGURATION & OFFLINE PERSISTENCE ──
 const firebaseConfig = {
   apiKey: "AIzaSyAjh6UHtqNWS2d4vsot1-WicwgevBzUtpg",
   authDomain: "studyquest-e3bc8.firebaseapp.com",
@@ -62,8 +65,17 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
-const db = getFirestore(firebaseApp);
-enableIndexedDbPersistence(db).catch(() => {});
+
+let db;
+try {
+  db = initializeFirestore(firebaseApp, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
+} catch (e) {
+  db = getFirestore(firebaseApp);
+}
 
 async function cleanSignOut() {
   try { await signOut(auth); } catch (e) {}
@@ -327,6 +339,131 @@ export default function App() {
   const [streakFreeze, setStreakFreeze] = useState(() => loadStreakFreeze());
   const [activeSession, setActiveTimerSession] = useState(() => loadActiveTimerSession());
   const [selectedDate, setSelectedDate] = useState(() => getStorageDateStr());
+  const [todayDateStr, setTodayDateStr] = useState(() => getStorageDateStr());
+
+  // Online / Offline network status
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" && "onLine" in navigator ? navigator.onLine : true));
+  useEffect(() => {
+    const onOnline = () => {
+      setIsOnline(true);
+      setSyncing(true);
+      setTimeout(() => setSyncing(false), 1200);
+    };
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  // 00:00 AM Midnight Rollover Check (locks previous days automatically at midnight)
+  useEffect(() => {
+    const checkMidnight = () => {
+      const currentToday = getStorageDateStr();
+      if (currentToday !== todayDateStr) {
+        setTodayDateStr(currentToday);
+      }
+    };
+    const interval = setInterval(checkMidnight, 10000);
+    window.addEventListener("focus", checkMidnight);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", checkMidnight);
+    };
+  }, [todayDateStr]);
+
+  // ── CENTRAL PERSISTENT TIMER TICK LOOP (RUNS ACROSS ALL TABS/PAGES & IN BACKGROUND) ──
+  useEffect(() => {
+    if (!activeSession || activeSession.isPaused) return;
+
+    const interval = setInterval(() => {
+      setActiveTimerSession((prev) => {
+        if (!prev || prev.isPaused) return prev;
+        const now = Date.now();
+        const last = prev.lastUpdatedTimestamp || now;
+        const deltaSecs = Math.max(1, Math.floor((now - last) / 1000));
+        const newElapsed = (prev.elapsedSeconds || 0) + deltaSecs;
+        const isCountdown = (prev.targetSeconds || 0) > 0;
+        const newRemaining = isCountdown ? Math.max(0, (prev.targetSeconds || 0) - newElapsed) : 0;
+
+        const updated = {
+          ...prev,
+          elapsedSeconds: newElapsed,
+          remainingSeconds: newRemaining,
+          lastUpdatedTimestamp: last + (deltaSecs * 1000)
+        };
+
+        saveActiveTimerSession(updated);
+
+        // Auto-complete when countdown hits 0
+        if (isCountdown && newRemaining === 0 && (prev.remainingSeconds || 0) > 0) {
+          SFX.win();
+          const today = getStorageDateStr();
+          const updatedLog = recordStudyTime(today, newElapsed);
+          setStudyLog(updatedLog);
+          if (prev.taskId) {
+            updateTaskState(today, prev.taskId, {
+              status: "completed",
+              secondsStudied: newElapsed
+            });
+            setAllDailyStates((allPrev) => ({
+              ...allPrev,
+              [today]: {
+                ...(allPrev[today] || {}),
+                [prev.taskId]: {
+                  ...(allPrev[today]?.[prev.taskId] || {}),
+                  status: "completed",
+                  secondsStudied: newElapsed
+                }
+              }
+            }));
+          }
+          return {
+            ...updated,
+            isPaused: true,
+            isCompleted: true
+          };
+        }
+
+        return updated;
+      });
+    }, 1000);
+
+    const handleCatchup = () => {
+      if (document.visibilityState === "visible") {
+        setActiveTimerSession((prev) => {
+          if (!prev || prev.isPaused) return prev;
+          const now = Date.now();
+          const last = prev.lastUpdatedTimestamp || now;
+          const deltaSecs = Math.max(0, Math.floor((now - last) / 1000));
+          if (deltaSecs <= 0) return prev;
+          const newElapsed = (prev.elapsedSeconds || 0) + deltaSecs;
+          const isCountdown = (prev.targetSeconds || 0) > 0;
+          const newRemaining = isCountdown ? Math.max(0, (prev.targetSeconds || 0) - newElapsed) : 0;
+          const updated = {
+            ...prev,
+            elapsedSeconds: newElapsed,
+            remainingSeconds: newRemaining,
+            lastUpdatedTimestamp: now
+          };
+          saveActiveTimerSession(updated);
+          return updated;
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleCatchup);
+    window.addEventListener("focus", handleCatchup);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleCatchup);
+      window.removeEventListener("focus", handleCatchup);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession?.isPaused, activeSession?.taskId, activeSession?.targetSeconds]);
 
   // Direct fullscreen focus launch flag
   const [focusLaunchTrigger, setFocusLaunchTrigger] = useState(false);
@@ -441,8 +578,13 @@ export default function App() {
     streakFreezeEnabled: streakFreeze
   });
 
-  // Task & Schedule handlers
+  // Task & Schedule handlers with strict 00:00 AM Cutoff
   function handleToggleTaskStatus(dayStr, taskId, status) {
+    const today = getStorageDateStr();
+    if (dayStr < today) {
+      console.warn("Action blocked: 00:00 AM cutoff passed for", dayStr);
+      return;
+    }
     const updated = updateTaskState(dayStr, taskId, { status });
     setAllDailyStates((prev) => ({
       ...prev,
@@ -450,32 +592,97 @@ export default function App() {
     }));
   }
 
-  function handleStartTaskTimer(task, openFullscreenFocus = false) {
+  // Timer Control Handlers (centralized at App level)
+  function handleStartTimerSession({ taskId = null, subject = "General Study", targetSeconds = 3600, openFullscreen = false }) {
     const session = {
-      taskId: task.id,
-      subject: task.subject,
-      targetSeconds: (task.allocatedDurationMinutes || 60) * 60,
+      taskId,
+      subject,
+      targetSeconds,
       elapsedSeconds: 0,
-      remainingSeconds: (task.allocatedDurationMinutes || 60) * 60,
+      remainingSeconds: targetSeconds,
       isPaused: false,
       lastUpdatedTimestamp: Date.now()
     };
     setActiveTimerSession(session);
     saveActiveTimerSession(session);
-    setFocusLaunchTrigger(Boolean(openFullscreenFocus));
+    if (openFullscreen) {
+      setFocusLaunchTrigger(true);
+    }
+    SFX.start();
+  }
+
+  function handleStartTaskTimer(task, openFullscreenFocus = false) {
+    const today = getStorageDateStr();
+    if (selectedDate < today) {
+      alert("This routine day is locked (00:00 AM cutoff passed). You cannot start sessions for past days.");
+      return;
+    }
+    handleStartTimerSession({
+      taskId: task.id,
+      subject: task.subject,
+      targetSeconds: (task.allocatedDurationMinutes || 60) * 60,
+      openFullscreen: openFullscreenFocus
+    });
     setView("study");
   }
 
-  function handleUpdateSession(session) {
-    setActiveTimerSession(session);
-    if (session) {
-      saveActiveTimerSession(session);
-    } else {
-      clearActiveTimerSession();
-    }
+  function handlePauseTimer() {
+    setActiveTimerSession((prev) => {
+      if (!prev) return null;
+      const now = Date.now();
+      const delta = Math.max(0, Math.floor((now - (prev.lastUpdatedTimestamp || now)) / 1000));
+      const newElapsed = (prev.elapsedSeconds || 0) + delta;
+      const isCountdown = (prev.targetSeconds || 0) > 0;
+      const newRemaining = isCountdown ? Math.max(0, (prev.targetSeconds || 0) - newElapsed) : 0;
+      const updated = {
+        ...prev,
+        elapsedSeconds: newElapsed,
+        remainingSeconds: newRemaining,
+        isPaused: true,
+        lastUpdatedTimestamp: now
+      };
+      saveActiveTimerSession(updated);
+      return updated;
+    });
+    SFX.stop();
   }
 
-  function handleCompleteSession(secondsStudied, taskId) {
+  function handleResumeTimer() {
+    setActiveTimerSession((prev) => {
+      if (!prev) return null;
+      const updated = {
+        ...prev,
+        isPaused: false,
+        lastUpdatedTimestamp: Date.now()
+      };
+      saveActiveTimerSession(updated);
+      return updated;
+    });
+    SFX.start();
+  }
+
+  function handleResetTimer() {
+    clearActiveTimerSession();
+    setActiveTimerSession(null);
+    SFX.undo();
+  }
+
+  function handleAddTimerMinutes(mins = 5) {
+    setActiveTimerSession((prev) => {
+      if (!prev) return null;
+      const addedSecs = mins * 60;
+      const updated = {
+        ...prev,
+        targetSeconds: (prev.targetSeconds || 0) + addedSecs,
+        remainingSeconds: (prev.remainingSeconds || 0) + addedSecs
+      };
+      saveActiveTimerSession(updated);
+      return updated;
+    });
+    SFX.add();
+  }
+
+  function handleFinishTimer(secondsStudied, taskId, subject) {
     const today = getStorageDateStr();
     const updatedLog = recordStudyTime(today, secondsStudied);
     setStudyLog(updatedLog);
@@ -547,6 +754,9 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* ── ANIME & CYBERPUNK CUSTOM MOUSE CURSOR (POINTER ONLY) ── */}
+      <CustomCursor />
+
       {/* ── STICKY TOP HEADER ── */}
       <header className="app-header">
         <div className="app-header-inner">
@@ -565,8 +775,8 @@ export default function App() {
               <span>{streakMetrics.currentStreak}d</span>
             </button>
 
-            <span className={`sync-status-pill ${syncing ? "syncing" : ""}`}>
-              {syncing ? "Syncing..." : user ? "● Cloud" : "● Local"}
+            <span className={`sync-status-pill ${syncing ? "syncing" : ""} ${!isOnline ? "offline" : ""}`}>
+              {!isOnline ? "⚡ Offline" : syncing ? "🔄 Syncing..." : user ? "● Cloud" : "● Local"}
             </span>
 
             <button
@@ -596,7 +806,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── PERSISTENT ACTIVE TIMER FLOATING BANNER ── */}
+      {/* ── PERSISTENT ACTIVE TIMER FLOATING BANNER (TICKS LIVE ACROSS ALL PAGES) ── */}
       {view !== "study" && (
         <ActiveTimerBanner
           session={activeSession}
@@ -606,11 +816,11 @@ export default function App() {
           }}
           onTogglePause={() => {
             if (!activeSession) return;
-            const updated = { ...activeSession, isPaused: !activeSession.isPaused };
-            setActiveTimerSession(updated);
-            saveActiveTimerSession(updated);
-            if (updated.isPaused) SFX.stop();
-            else SFX.start();
+            if (activeSession.isPaused) {
+              handleResumeTimer();
+            } else {
+              handlePauseTimer();
+            }
           }}
         />
       )}
@@ -670,8 +880,12 @@ export default function App() {
         {view === "study" && (
           <StudyTimer
             activeSession={activeSession}
-            onUpdateSession={handleUpdateSession}
-            onCompleteSession={handleCompleteSession}
+            onStartSession={handleStartTimerSession}
+            onPauseSession={handlePauseTimer}
+            onResumeSession={handleResumeTimer}
+            onResetSession={handleResetTimer}
+            onAddMinutes={handleAddTimerMinutes}
+            onFinishSession={handleFinishTimer}
             onMarkTaskCompleted={handleMarkTaskCompleted}
             routineSchedule={routineSchedule}
             sfx={SFX}

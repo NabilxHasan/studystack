@@ -132,3 +132,23 @@ describe('App Component', () => {
     expect(await screen.findByText(/CONTINUE AS GUEST/i)).toBeInTheDocument();
   });
 });
+
+describe('Midnight 00:00 AM Cutoff Engine', () => {
+  test('correctly detects past dates for read-only locking', () => {
+    const today = new Date();
+    const todayStr = dateStr(today);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayStr = dateStr(yesterday);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const tomorrowStr = dateStr(tomorrow);
+
+    expect(yesterdayStr < todayStr).toBe(true);
+    expect(todayStr < todayStr).toBe(false);
+    expect(tomorrowStr < todayStr).toBe(false);
+  });
+});
+

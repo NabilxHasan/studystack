@@ -30,6 +30,9 @@ export default function RoutineChecklist({
   const selectedDayName = DAYS[currentDateObj.getDay()];
   const todayActualName = DAYS[new Date().getDay()];
 
+  const todayStr = dateStr();
+  const isPastDay = selectedDateStr < todayStr;
+
   const dayTasks = routineSchedule.filter((t) => t.day === selectedDayName);
 
   const totalTasks = dayTasks.length;
@@ -41,6 +44,7 @@ export default function RoutineChecklist({
   const meta = DAY_METADATA[selectedDayName] || { tag: "REGULAR", totalHours: 7 };
 
   function handleQuickCheck(taskId) {
+    if (isPastDay) return;
     sfx?.click?.();
     const current = dailyStates[taskId]?.status || "pending";
     const next = current === "completed" ? "pending" : "completed";
@@ -49,6 +53,7 @@ export default function RoutineChecklist({
   }
 
   function handleStatusChange(taskId, status) {
+    if (isPastDay) return;
     sfx?.click?.();
     if (status === "completed") sfx?.done?.();
     onToggleTaskStatus?.(selectedDateStr, taskId, status);
@@ -147,12 +152,18 @@ export default function RoutineChecklist({
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "14px" }}>
-          <button
-            style={{ fontSize: "12px", fontWeight: 600, color: "var(--accent)", display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", cursor: "pointer" }}
-            onClick={() => setIsEditingSchedule(!isEditingSchedule)}
-          >
-            {isEditingSchedule ? "✕ Close Editor" : "+ Add Study Block"}
-          </button>
+          {!isPastDay ? (
+            <button
+              style={{ fontSize: "12px", fontWeight: 600, color: "var(--accent)", display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", cursor: "pointer" }}
+              onClick={() => setIsEditingSchedule(!isEditingSchedule)}
+            >
+              {isEditingSchedule ? "✕ Close Editor" : "+ Add Study Block"}
+            </button>
+          ) : (
+            <div style={{ fontSize: "12px", color: "var(--text-subtle)", display: "flex", alignItems: "center", gap: "4px" }}>
+              🔒 Routine Locked
+            </div>
+          )}
           <button
             style={{ fontSize: "11px", color: "var(--text-subtle)", background: "none", border: "none", cursor: "pointer" }}
             onClick={() => {
@@ -166,8 +177,18 @@ export default function RoutineChecklist({
         </div>
       </div>
 
+      {/* ── 00:00 AM MIDNIGHT CUTOFF LOCKED BANNER ── */}
+      {isPastDay && (
+        <div className="past-day-locked-banner fade-in">
+          <span style={{ fontSize: "18px" }}>🔒</span>
+          <div>
+            <strong>Day Locked (00:00 AM Cutoff):</strong> Midnight has passed for {selectedDayName}. Past tasks cannot be finished or edited and are preserved as historical records.
+          </div>
+        </div>
+      )}
+
       {/* ── SCHEDULE EDIT / ADD BLOCK FORM ── */}
-      {isEditingSchedule && (
+      {isEditingSchedule && !isPastDay && (
         <div className="minimal-card" style={{ cursor: "default" }}>
           <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "12px" }}>
             Add Study Block to {selectedDayName}
@@ -232,11 +253,12 @@ export default function RoutineChecklist({
             return (
               <div
                 key={task.id}
-                className={`task-card ${status}`}
+                className={`task-card ${status} ${isPastDay ? "locked" : ""}`}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "14px", minWidth: 0, flex: 1 }}>
-                  {/* Quick-toggle checkbox */}
+                  {/* Quick-toggle checkbox / lock */}
                   <button
+                    disabled={isPastDay}
                     onClick={() => handleQuickCheck(task.id)}
                     style={{
                       width: "24px",
@@ -248,14 +270,14 @@ export default function RoutineChecklist({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "14px",
+                      fontSize: isCompleted ? "14px" : "12px",
                       fontWeight: 800,
                       flexShrink: 0,
-                      cursor: "pointer"
+                      cursor: isPastDay ? "not-allowed" : "pointer"
                     }}
-                    title="Toggle Completed"
+                    title={isPastDay ? "Locked: 00:00 AM cutoff passed" : "Toggle Completed"}
                   >
-                    {isCompleted ? "✓" : ""}
+                    {isCompleted ? "✓" : isPastDay ? "🔒" : ""}
                   </button>
 
                   <div className="task-info-left">
@@ -278,19 +300,23 @@ export default function RoutineChecklist({
                 <div className="task-actions-right">
                   <button
                     className="study-task-btn"
+                    disabled={isPastDay}
                     onClick={() => {
+                      if (isPastDay) return;
                       sfx?.start?.();
                       onStartTaskTimer?.(task, true); // launch directly into Fullscreen Focus mode!
                     }}
-                    title="Focus on this task in Fullscreen Mode"
+                    title={isPastDay ? "Locked: 00:00 AM cutoff passed" : "Focus on this task in Fullscreen Mode"}
                   >
-                    Focus ▶
+                    {isPastDay ? "Locked 🔒" : "Focus ▶"}
                   </button>
 
                   <select
                     className="status-dropdown-btn"
                     value={status}
+                    disabled={isPastDay}
                     onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                    title={isPastDay ? "Locked: 00:00 AM cutoff passed" : "Change Status"}
                   >
                     {Object.keys(STATUS_CONFIG).map((k) => (
                       <option key={k} value={k}>
@@ -299,7 +325,7 @@ export default function RoutineChecklist({
                     ))}
                   </select>
 
-                  {task.id.startsWith("custom-") && (
+                  {task.id.startsWith("custom-") && !isPastDay && (
                     <button
                       onClick={() => handleDeleteTask(task.id)}
                       style={{ color: "var(--danger)", padding: "4px", fontSize: "12px", background: "none", border: "none", cursor: "pointer" }}
