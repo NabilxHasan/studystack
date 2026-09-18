@@ -5,11 +5,11 @@
 
 import { DEFAULT_ROUTINE_SCHEDULE } from "../config/routineData";
 
-export const STORAGE_VERSION = 2;
+export const STORAGE_VERSION = 3;
 
 const KEYS = {
   VERSION: "sq_storage_version",
-  ROUTINE: "sq_routine_schedule_v2",
+  ROUTINE: "sq_routine_schedule_v3",
   DAILY_STATES: "sq_daily_task_states_v2",
   ACTIVE_TIMER: "sq_active_timer_session_v2",
   STUDY_LOG: "sq_study_log_v2",
@@ -86,7 +86,7 @@ export function saveRoutineSchedule(schedule) {
 }
 
 /**
- * Reset routine schedule back to scraped 52h default
+ * Reset routine schedule back to academic default schedule
  */
 export function resetRoutineSchedule() {
   try {

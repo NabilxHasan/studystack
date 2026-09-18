@@ -8,12 +8,11 @@ import {
 } from "../config/routineData";
 
 export default function RoutineTable({ routineSchedule = [], onStartTaskTimer }) {
-  const blocks = [
-    { num: 1, label: "BLOCK 1", dur: "2h" },
-    { num: 2, label: "BLOCK 2", dur: "2h" },
-    { num: 3, label: "BLOCK 3", dur: "1-2h" },
-    { num: 4, label: "BLOCK 4", dur: "1h" },
-    { num: 5, label: "BLOCK 5", dur: "1h" }
+  const sessions = [
+    { num: 1, label: "SESSION 1" },
+    { num: 2, label: "SESSION 2" },
+    { num: 3, label: "SESSION 3" },
+    { num: 4, label: "SESSION 4" }
   ];
 
   return (
@@ -21,40 +20,39 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
       {/* ── SUMMARY STATS BAR ── */}
       <div className="table-stats-bar">
         <div className="table-stat-card">
-          <div className="stat-num">52h</div>
-          <div className="stat-lbl">Weekly Study Target</div>
+          <div className="stat-num">Academics</div>
+          <div className="stat-lbl">Primary Core Focus</div>
         </div>
         <div className="table-stat-card">
-          <div className="stat-num">8h</div>
-          <div className="stat-lbl">DSA Focus (4 Sessions)</div>
+          <div className="stat-num">4 Sessions</div>
+          <div className="stat-lbl">Weekly DSA Engine</div>
         </div>
         <div className="table-stat-card">
           <div className="stat-num">7 Days</div>
-          <div className="stat-lbl">Scheduled Routine</div>
+          <div className="stat-lbl">Structured Routine</div>
         </div>
         <div className="table-stat-card">
-          <div className="stat-num">5 Blocks</div>
-          <div className="stat-lbl">Structured Daily Slots</div>
+          <div className="stat-num">Weekend</div>
+          <div className="stat-lbl">Skill Gain Focus</div>
         </div>
       </div>
 
-      {/* ── MASTER 52H ROUTINE TABLE ── */}
+      {/* ── MASTER ROUTINE TABLE ── */}
       <div className="rt-table-scroll">
         <table className="rt-table">
           <thead>
             <tr>
-              <th className="rt-th" style={{ width: "13%" }}>DAY</th>
-              {blocks.map((b) => (
-                <th key={b.num} className="rt-th" style={{ width: "15%" }}>
-                  {b.label} <span style={{ fontSize: "11px", fontWeight: 500, color: "var(--text-subtle)" }}>({b.dur})</span>
+              <th className="rt-th" style={{ width: "16%" }}>DAY</th>
+              {sessions.map((s) => (
+                <th key={s.num} className="rt-th" style={{ width: "21%" }}>
+                  {s.label}
                 </th>
               ))}
-              <th className="rt-th" style={{ width: "10%", textAlign: "center" }}>TOTAL</th>
             </tr>
           </thead>
           <tbody>
             {DAYS.map((dayName) => {
-              const dayMeta = DAY_METADATA[dayName] || { tag: "REGULAR", totalHours: 7 };
+              const dayMeta = DAY_METADATA[dayName] || { tag: "REGULAR" };
               const dayTasks = routineSchedule.filter((t) => t.day === dayName);
 
               return (
@@ -68,12 +66,12 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
                     </div>
                   </td>
 
-                  {/* 5 Slots */}
-                  {[0, 1, 2, 3, 4].map((slotIdx) => {
+                  {/* 4 Slots */}
+                  {[0, 1, 2, 3].map((slotIdx) => {
                     const task = dayTasks[slotIdx];
                     if (!task) {
                       return (
-                        <td key={slotIdx} className="rt-td" style={{ color: "var(--text-subtle)", fontSize: "12px" }}>
+                        <td key={slotIdx} className="rt-td" style={{ color: "var(--text-subtle)", fontSize: "12px", textAlign: "center" }}>
                           —
                         </td>
                       );
@@ -95,11 +93,8 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
                               {task.subject}
                             </span>
                           </div>
-                          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "3px" }}>
-                            ⏱️ {task.allocatedDurationMinutes >= 60 ? `${task.allocatedDurationMinutes / 60}h` : `${task.allocatedDurationMinutes}m`} Target
-                          </div>
                           {task.notes && (
-                            <div style={{ fontSize: "10px", color: "var(--text-subtle)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <div style={{ fontSize: "11px", color: "var(--text-subtle)", marginTop: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {task.notes}
                             </div>
                           )}
@@ -107,12 +102,6 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
                       </td>
                     );
                   })}
-
-                  <td className="rt-td" style={{ textAlign: "center", verticalAlign: "middle" }}>
-                    <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: "14px", color: "var(--text)" }}>
-                      {dayMeta.totalHours}h
-                    </span>
-                  </td>
                 </tr>
               );
             })}
@@ -128,7 +117,7 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
               ⚡ DSA Strategy: 50 / 30 / 20 Rule
             </div>
             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-              8 hours weekly across 4 designated sessions (Sun / Tue / Thu / Sat)
+              4 designated sessions weekly across Sun, Tue, Thu, Sat
             </div>
           </div>
           <span className="hero-day-tag">CORE ENGINE</span>
@@ -140,7 +129,7 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <span className="dsa-pct-badge">{item.percent}%</span>
                 <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)" }}>
-                  {item.hoursTotal}h Total ({item.perSession}/sess)
+                  Priority
                 </span>
               </div>
               <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginTop: "6px" }}>

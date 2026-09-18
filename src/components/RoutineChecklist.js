@@ -22,7 +22,6 @@ export default function RoutineChecklist({
 }) {
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
   const [newTaskSubject, setNewTaskSubject] = useState("");
-  const [newTaskDuration, setNewTaskDuration] = useState("60");
   const [newTaskNotes, setNewTaskNotes] = useState("");
 
   const [y, m, d] = selectedDateStr.split("-").map(Number);
@@ -41,7 +40,7 @@ export default function RoutineChecklist({
     return st === "completed";
   }).length;
   const percentComplete = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-  const meta = DAY_METADATA[selectedDayName] || { tag: "REGULAR", totalHours: 7 };
+  const meta = DAY_METADATA[selectedDayName] || { tag: "REGULAR" };
 
   function handleQuickCheck(taskId) {
     if (isPastDay) return;
@@ -64,12 +63,10 @@ export default function RoutineChecklist({
       alert("Please enter a subject name.");
       return;
     }
-    const durationNum = parseInt(newTaskDuration, 10) || 60;
     const newTask = {
       id: `custom-${Date.now()}`,
       day: selectedDayName,
       subject: newTaskSubject.trim(),
-      allocatedDurationMinutes: durationNum,
       notes: newTaskNotes.trim() || undefined,
       defaultTaskType: "custom"
     };
@@ -97,7 +94,6 @@ export default function RoutineChecklist({
         {DAYS.map((dayName, idx) => {
           const isActive = dayName === selectedDayName;
           const isToday = dayName === todayActualName;
-          const dayMeta = DAY_METADATA[dayName] || { totalHours: 7 };
 
           return (
             <button
@@ -114,7 +110,6 @@ export default function RoutineChecklist({
             >
               <span>{dayName.slice(0, 3).toUpperCase()}</span>
               {isToday && <span className="day-tag-badge">TODAY</span>}
-              <span style={{ fontSize: "11px", opacity: 0.8 }}>{dayMeta.totalHours}h</span>
             </button>
           );
         })}
@@ -167,12 +162,12 @@ export default function RoutineChecklist({
           <button
             style={{ fontSize: "11px", color: "var(--text-subtle)", background: "none", border: "none", cursor: "pointer" }}
             onClick={() => {
-              if (window.confirm("Reset routine to original 52-hour default?")) {
+              if (window.confirm("Reset routine to the academic default schedule?")) {
                 onResetSchedule?.();
               }
             }}
           >
-            Reset to 52h Template
+            Reset Routine
           </button>
         </div>
       </div>
@@ -196,27 +191,14 @@ export default function RoutineChecklist({
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <input
               type="text"
-              placeholder="Subject (e.g. DSA, Java, Physics)"
+              placeholder="Subject (e.g. DSA, OOP, Physics, Revision)"
               className="auth-input-field"
               value={newTaskSubject}
               onChange={(e) => setNewTaskSubject(e.target.value)}
             />
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <input
-                type="number"
-                placeholder="Duration (Minutes, e.g. 120)"
-                className="auth-input-field"
-                style={{ flex: 1 }}
-                value={newTaskDuration}
-                onChange={(e) => setNewTaskDuration(e.target.value)}
-              />
-              <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                ({Math.round(((parseInt(newTaskDuration, 10) || 0) / 60) * 10) / 10}h)
-              </span>
-            </div>
             <input
               type="text"
-              placeholder="Notes / topics (e.g. Trees, LeetCode, Java OOP)"
+              placeholder="Notes / topics (e.g. Problem Sets, LeetCode, Review)"
               className="auth-input-field"
               value={newTaskNotes}
               onChange={(e) => setNewTaskNotes(e.target.value)}
@@ -281,16 +263,13 @@ export default function RoutineChecklist({
                   </button>
 
                   <div className="task-info-left">
-                    <div className="task-meta-line">
-                      <span className="task-time-badge">
-                        {task.allocatedDurationMinutes >= 60 ? `${task.allocatedDurationMinutes / 60}h` : `${task.allocatedDurationMinutes}m`}
-                      </span>
-                      {task.notes && (
+                    {task.notes && (
+                      <div className="task-meta-line">
                         <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                          • {task.notes}
+                          {task.notes}
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <div className="task-title" style={{ textDecoration: isCompleted ? "line-through" : "none" }}>
                       {theme.icon} {task.subject}
                     </div>

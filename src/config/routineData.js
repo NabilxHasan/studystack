@@ -1,19 +1,19 @@
 /**
- * 52-Hour Weekly Routine Configuration
- * Scraped and standardized from https://routine-5c70ac.tiiny.site/
+ * Academic-Focused Weekly Routine Configuration
+ * Priority on core academic courses, DSA, OOP, and weekend Skill Gain
  */
 
 export const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export const DAYS_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 export const DAY_METADATA = {
-  Sunday:    { tag: "REGULAR",    totalHours: 8, bgClass: "bg-sun", color: "#e11d48" },
-  Monday:    { tag: "REGULAR",    totalHours: 7, bgClass: "bg-mon", color: "#2563eb" },
-  Tuesday:   { tag: "REGULAR",    totalHours: 7, bgClass: "bg-tue", color: "#059669" },
-  Wednesday: { tag: "REGULAR",    totalHours: 7, bgClass: "bg-wed", color: "#7c3aed" },
-  Thursday:  { tag: "REGULAR",    totalHours: 7, bgClass: "bg-thu", color: "#d97706" },
-  Friday:    { tag: "HOLIDAY",    totalHours: 8, bgClass: "bg-fri", color: "#0891b2" },
-  Saturday:  { tag: "WEEKLY OFF", totalHours: 8, bgClass: "bg-sat", color: "#db2777" },
+  Sunday:    { tag: "REGULAR",    bgClass: "bg-sun", color: "#e11d48" },
+  Monday:    { tag: "REGULAR",    bgClass: "bg-mon", color: "#2563eb" },
+  Tuesday:   { tag: "REGULAR",    bgClass: "bg-tue", color: "#059669" },
+  Wednesday: { tag: "REGULAR",    bgClass: "bg-wed", color: "#7c3aed" },
+  Thursday:  { tag: "REGULAR",    bgClass: "bg-thu", color: "#d97706" },
+  Friday:    { tag: "HOLIDAY",    bgClass: "bg-fri", color: "#0891b2" },
+  Saturday:  { tag: "WEEKLY OFF", bgClass: "bg-sat", color: "#db2777" },
 };
 
 export const SUBJECT_THEMES = {
@@ -73,356 +73,218 @@ export const SUBJECT_THEMES = {
     icon: "🔄",
     defaultType: "revision"
   },
-  "Boot.dev": {
-    category: "backend",
-    color: "#f97316",
-    borderClass: "c-boot",
-    icon: "🚀",
-    defaultType: "self-study"
-  },
-  "CTF": {
-    category: "security",
+  "Skill Gain": {
+    category: "skills",
     color: "#6366f1",
-    borderClass: "c-ctf",
-    icon: "🚩",
-    defaultType: "lab"
-  },
-  "AI Hackathon": {
-    category: "ai",
-    color: "#ec4899",
-    borderClass: "c-hack",
-    icon: "🤖",
-    defaultType: "lab"
-  },
-  "GameDev": {
-    category: "gamedev",
-    color: "#10b981",
-    borderClass: "c-game",
-    icon: "🎮",
-    defaultType: "lab"
-  },
-  "GIMP / DaVinci": {
-    category: "creative",
-    color: "#f59e0b",
-    borderClass: "c-gimp",
-    icon: "🎨",
+    borderClass: "c-skill",
+    icon: "🛠️",
     defaultType: "lab"
   }
 };
 
 /**
- * Baseline 52-hour weekly routine parsed from https://routine-5c70ac.tiiny.site/
+ * Academic-priority routine:
+ * - Sunday to Thursday: 100% Core Academics, DSA, OOP, and Revision
+ * - Friday & Saturday: Academics + Weekend Skill Gain (CTF / Hackathon / Game Dev / GIMP / DaVinci)
+ * - Flexible study blocks without arbitrary time limits
  */
 export const DEFAULT_ROUTINE_SCHEDULE = [
-  // SUNDAY (8 Hours)
+  // SUNDAY (Academics Priority)
   {
     id: "sun-block-1",
     day: "Sunday",
     subject: "DSA",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours (Academic + LC + CF)",
+    notes: "Academic / LeetCode / Codeforces",
     defaultTaskType: "self-study"
   },
   {
     id: "sun-block-2",
     day: "Sunday",
     subject: "OOP (Java)",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Core Concepts & Practice",
     defaultTaskType: "lecture"
   },
   {
     id: "sun-block-3",
     day: "Sunday",
     subject: "Academic Revision",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Weekly Concept Review",
     defaultTaskType: "revision"
   },
-  {
-    id: "sun-block-4",
-    day: "Sunday",
-    subject: "CTF",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "sun-block-5",
-    day: "Sunday",
-    subject: "Boot.dev",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "self-study"
-  },
 
-  // MONDAY (7 Hours)
+  // MONDAY (Academics Priority)
   {
     id: "mon-block-1",
     day: "Monday",
     subject: "Comp Architecture & Microprocessor",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Architecture & Instruction Sets",
     defaultTaskType: "lecture"
   },
   {
     id: "mon-block-2",
     day: "Monday",
     subject: "Data Communication",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Protocols & Signals",
     defaultTaskType: "lecture"
   },
   {
     id: "mon-block-3",
     day: "Monday",
-    subject: "AI Hackathon",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "mon-block-4",
-    day: "Monday",
-    subject: "GameDev",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "mon-block-5",
-    day: "Monday",
-    subject: "Boot.dev",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "self-study"
+    subject: "Academic Revision",
+    notes: "Architecture & Data Comm Review",
+    defaultTaskType: "revision"
   },
 
-  // TUESDAY (7 Hours)
+  // TUESDAY (Academics Priority)
   {
     id: "tue-block-1",
     day: "Tuesday",
     subject: "DSA",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours (Academic + LC + CF)",
+    notes: "Academic / LeetCode / Codeforces",
     defaultTaskType: "self-study"
   },
   {
     id: "tue-block-2",
     day: "Tuesday",
     subject: "Physics",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Core Theory & Problems",
     defaultTaskType: "lecture"
   },
   {
     id: "tue-block-3",
     day: "Tuesday",
-    subject: "GameDev",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "tue-block-4",
-    day: "Tuesday",
-    subject: "GIMP / DaVinci",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour (Either One)",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "tue-block-5",
-    day: "Tuesday",
-    subject: "Boot.dev",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "self-study"
+    subject: "Academic Revision",
+    notes: "Physics & DSA Problem Sets",
+    defaultTaskType: "revision"
   },
 
-  // WEDNESDAY (7 Hours)
+  // WEDNESDAY (Academics Priority)
   {
     id: "wed-block-1",
     day: "Wednesday",
     subject: "EEE",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Circuits & Electrical Analysis",
     defaultTaskType: "lecture"
   },
   {
     id: "wed-block-2",
     day: "Wednesday",
     subject: "Calculus",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Differentiation & Integrals",
     defaultTaskType: "lecture"
   },
   {
     id: "wed-block-3",
     day: "Wednesday",
     subject: "Academic Revision",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Math & Electrical Formulas",
     defaultTaskType: "revision"
   },
-  {
-    id: "wed-block-4",
-    day: "Wednesday",
-    subject: "CTF",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
 
-  // THURSDAY (7 Hours)
+  // THURSDAY (Academics Priority)
   {
     id: "thu-block-1",
     day: "Thursday",
     subject: "DSA",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours (Academic + LC + CF)",
+    notes: "Academic / LeetCode / Codeforces",
     defaultTaskType: "self-study"
   },
   {
     id: "thu-block-2",
     day: "Thursday",
     subject: "OOP (Java)",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Object-Oriented Design & Lab",
     defaultTaskType: "lecture"
   },
   {
     id: "thu-block-3",
     day: "Thursday",
-    subject: "AI Hackathon",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "thu-block-4",
-    day: "Thursday",
-    subject: "GIMP / DaVinci",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour (Either One)",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "thu-block-5",
-    day: "Thursday",
-    subject: "Boot.dev",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "self-study"
+    subject: "Academic Revision",
+    notes: "OOP & DSA Problem Sets",
+    defaultTaskType: "revision"
   },
 
-  // FRIDAY (8 Hours - Public Holiday)
+  // FRIDAY (Holiday - Academics + Weekend Skill Gain)
   {
     id: "fri-block-1",
     day: "Friday",
     subject: "Comp Architecture & Microprocessor",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Microprocessor Lab & Assembly",
     defaultTaskType: "lecture"
   },
   {
     id: "fri-block-2",
     day: "Friday",
     subject: "Data Communication",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Network Layers & Transmission",
     defaultTaskType: "lecture"
   },
   {
     id: "fri-block-3",
     day: "Friday",
     subject: "Physics",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Theory & Problem Sets",
     defaultTaskType: "lecture"
   },
   {
     id: "fri-block-4",
     day: "Friday",
-    subject: "AI Hackathon",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "fri-block-5",
-    day: "Friday",
-    subject: "CTF",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
+    subject: "Skill Gain",
+    notes: "CTF / Hackathon / Game Dev / GIMP / DaVinci",
     defaultTaskType: "lab"
   },
 
-  // SATURDAY (8 Hours - Weekly Off)
+  // SATURDAY (Weekly Off - Academics + Weekend Skill Gain)
   {
     id: "sat-block-1",
     day: "Saturday",
     subject: "DSA",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours (Academic + LC + CF)",
+    notes: "Academic / LeetCode / Codeforces",
     defaultTaskType: "self-study"
   },
   {
     id: "sat-block-2",
     day: "Saturday",
     subject: "EEE",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Circuit Analysis & AC/DC",
     defaultTaskType: "lecture"
   },
   {
     id: "sat-block-3",
     day: "Saturday",
     subject: "Calculus",
-    allocatedDurationMinutes: 120,
-    notes: "2 hours",
+    notes: "Problem Sets & Series",
     defaultTaskType: "lecture"
   },
   {
     id: "sat-block-4",
     day: "Saturday",
-    subject: "GameDev",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour",
-    defaultTaskType: "lab"
-  },
-  {
-    id: "sat-block-5",
-    day: "Saturday",
-    subject: "GIMP / DaVinci",
-    allocatedDurationMinutes: 60,
-    notes: "1 hour (Either One)",
+    subject: "Skill Gain",
+    notes: "CTF / Hackathon / Game Dev / GIMP / DaVinci",
     defaultTaskType: "lab"
   }
 ];
 
 export const DSA_BREAKDOWN = {
-  totalHours: 8,
   sessions: 4,
   days: ["Sunday", "Tuesday", "Thursday", "Saturday"],
   distribution: [
-    { title: "Academic DSA", percent: 50, hoursTotal: 4, perSession: "60m", color: "#f43f5e" },
-    { title: "LeetCode Practice", percent: 30, hoursTotal: 2.4, perSession: "36m", color: "#10b981" },
-    { title: "Codeforces Practice", percent: 20, hoursTotal: 1.6, perSession: "24m", color: "#38bdf8" }
+    { title: "Academic DSA", percent: 50, color: "#f43f5e" },
+    { title: "LeetCode Practice", percent: 30, color: "#10b981" },
+    { title: "Codeforces Practice", percent: 20, color: "#38bdf8" }
   ]
 };
 
 export const EXECUTION_GUIDELINES = [
-  { id: 1, header: "Academics First:", desc: "Understand concepts thoroughly and complete assignments promptly." },
-  { id: 2, header: "DSA (Double):", desc: "8 hours weekly across 4 consistent sessions (Sun / Tue / Thu / Sat)." },
-  { id: 3, header: "Boot.dev Track:", desc: "4 hours weekly (Sun, Mon, Tue, Thu) for backend & CS mastery." },
-  { id: 4, header: "Applied Skills:", desc: "CTF, AI Hackathon & GameDev (3h each) for active project builds." },
-  { id: 5, header: "Creative Track:", desc: "GIMP / DaVinci (3h total). Pick design or video editing." },
-  { id: 6, header: "Revision:", desc: "4 mandatory hours weekly. Active retrieval locks memory long term." }
+  { id: 1, header: "Academics Priority:", desc: "Weekdays (Sun–Thu) are 100% focused on core academic courses, DSA, and OOP." },
+  { id: 2, header: "DSA Consistency:", desc: "Consistent sessions across Sun, Tue, Thu, Sat (Academic + LeetCode + Codeforces)." },
+  { id: 3, header: "OOP (Java):", desc: "Solidify Java, OOP fundamentals, design patterns, and lab tasks." },
+  { id: 4, header: "Academic Revision:", desc: "Dedicated daily revision blocks for deep conceptual retention and exam readiness." },
+  { id: 5, header: "Weekend Skill Gain:", desc: "Fridays & Saturdays dedicated to applied skills: CTF / Hackathon / Game Dev / GIMP / DaVinci." }
 ];
 
 export const MOTTO = {
-  growth: "52 HOURS/WEEK = BALANCED GROWTH",
+  growth: "BALANCED ROUTINE & STEADY ACADEMIC GROWTH",
   phil: "Plan > Execute > Review > Improve",
   motto: "Stay Consistent, Stay Ahead!",
   dedication: "You've got this, Nabil! ★"

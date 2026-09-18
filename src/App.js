@@ -188,7 +188,7 @@ function AuthScreen({ onGuest }) {
       <div className="auth-card-clean">
         <div className="auth-header">
           <CyberLogo className="auth-cyber" />
-          <div className="auth-sub">52-Hour Routine &amp; Productivity Engine</div>
+          <div className="auth-sub">Routine &amp; Productivity Engine</div>
         </div>
 
         <div className="auth-tab-row">
@@ -762,7 +762,7 @@ export default function App() {
         <div className="app-header-inner">
           <div className="brand-section" onClick={() => { SFX.tap(); setView("routine"); }}>
             <CyberLogo className="header-cyber" />
-            <div className="brand-badge">52H Focus Engine</div>
+            <div className="brand-badge">Focus Engine</div>
           </div>
 
           <div className="header-right-actions">
@@ -839,7 +839,7 @@ export default function App() {
             className={`desktop-tab-btn ${view === "table" ? "active" : ""}`}
             onClick={() => { SFX.tap(); setView("table"); }}
           >
-            📅 52H TIMETABLE
+            📅 TIMETABLE
           </button>
           <button
             className={`desktop-tab-btn ${view === "study" ? "active" : ""}`}
@@ -851,7 +851,7 @@ export default function App() {
             className={`desktop-tab-btn ${view === "streak" ? "active" : ""}`}
             onClick={() => { SFX.tap(); setView("streak"); }}
           >
-            🔥 STREAK &amp; BADGES
+            🔥 STREAK TRACKER
           </button>
         </nav>
 

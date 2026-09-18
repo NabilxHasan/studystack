@@ -15,15 +15,31 @@ import { isDayGoalMet, computeStreakMetrics } from './utils/streakEngine';
 import App from './App';
 
 describe('StudyStack Routine & Timetable Configuration', () => {
-  test('has 7 schedule days and 52 total weekly hours', () => {
+  test('has 7 schedule days, weekday academic focus, and weekend Skill Gain', () => {
     expect(DAYS).toHaveLength(7);
     expect(DEFAULT_ROUTINE_SCHEDULE.length).toBeGreaterThan(20);
-    const totalWeeklyHours = DEFAULT_ROUTINE_SCHEDULE.reduce((sum, item) => sum + (item.allocatedDurationMinutes / 60), 0);
-    expect(totalWeeklyHours).toBe(52);
+
+    // Verify weekdays (Sunday - Thursday) are 100% academic courses, DSA, OOP, and Revision
+    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+    weekdays.forEach((day) => {
+      const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
+      expect(dayTasks.length).toBeGreaterThan(0);
+      dayTasks.forEach(task => {
+        expect(task.subject).not.toBe("Skill Gain");
+      });
+    });
+
+    // Verify Friday and Saturday have Skill Gain with obliques
+    const weekendDays = ["Friday", "Saturday"];
+    weekendDays.forEach((day) => {
+      const skillTask = DEFAULT_ROUTINE_SCHEDULE.find(t => t.day === day && t.subject === "Skill Gain");
+      expect(skillTask).toBeDefined();
+      expect(skillTask.notes).toContain("CTF / Hackathon / Game Dev / GIMP / DaVinci");
+    });
   });
 
   test('DSA 50/30/20 ratio definition matches requirements', () => {
-    expect(DSA_BREAKDOWN.totalHours).toBe(8);
+    expect(DSA_BREAKDOWN.sessions).toBe(4);
     const dist = DSA_BREAKDOWN.distribution;
     const academic = dist.find(d => d.title.includes('Academic'));
     const leetcode = dist.find(d => d.title.includes('LeetCode'));
