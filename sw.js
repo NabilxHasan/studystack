@@ -1,5 +1,5 @@
 /* StudyStack Service Worker — Offline PWA & Asset Preloader */
-const CACHE_NAME = 'studystack-v3';
+const CACHE_NAME = 'studystack-v4';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
