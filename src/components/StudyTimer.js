@@ -335,7 +335,7 @@ export default function StudyTimer({
             marginBottom: "20px",
             textAlign: "left"
           }}>
-            📌 Bound to routine task: <strong>{boundTask.day}</strong> • {boundTask.subject} ({boundTask.allocatedDurationMinutes ? `${boundTask.allocatedDurationMinutes}m target` : "Flexible"})
+            📌 Bound to routine task: <strong>{boundTask.day}</strong> • {boundTask.subject}
           </div>
         )}
 

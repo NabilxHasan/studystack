@@ -263,6 +263,9 @@ export default function RoutineChecklist({
                   </button>
 
                   <div className="task-info-left">
+                    <div className="task-title" style={{ textDecoration: isCompleted ? "line-through" : "none" }}>
+                      {theme.icon} {task.subject}
+                    </div>
                     {task.notes && (
                       <div className="task-meta-line">
                         <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
@@ -270,9 +273,6 @@ export default function RoutineChecklist({
                         </span>
                       </div>
                     )}
-                    <div className="task-title" style={{ textDecoration: isCompleted ? "line-through" : "none" }}>
-                      {theme.icon} {task.subject}
-                    </div>
                   </div>
                 </div>
 

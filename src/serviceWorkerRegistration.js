@@ -8,11 +8,30 @@ export function register() {
       navigator.serviceWorker
         .register(swUrl)
         .then((registration) => {
-          console.log('StudyStack ServiceWorker registered successfully:', registration.scope);
+          // Check for service worker updates periodically and on focus
+          registration.addEventListener('updatefound', () => {
+            const installingWorker = registration.installing;
+            if (installingWorker == null) return;
+            installingWorker.addEventListener('statechange', () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('New content available, reloading for instant update...');
+                window.location.reload();
+              }
+            });
+          });
         })
         .catch((error) => {
           console.error('Error during ServiceWorker registration:', error);
         });
+
+      // Reload if controller changes (e.g. clients.claim)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
     });
   }
 }

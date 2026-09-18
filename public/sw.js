@@ -1,5 +1,5 @@
 /* StudyStack Service Worker — Offline PWA & Asset Preloader */
-const CACHE_NAME = 'studystack-v1';
+const CACHE_NAME = 'studystack-v3';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
@@ -11,22 +11,24 @@ const PRECACHE_ASSETS = [
   './apple-touch-icon.png'
 ];
 
-// Install: Precache app shell
+// Install: Precache app shell and skip waiting immediately
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// Activate: Purge older caches
+// Activate: Purge ALL older caches and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((name) => {
           if (name !== CACHE_NAME) {
+            console.log('Purging old service worker cache:', name);
             return caches.delete(name);
           }
           return null;
@@ -36,12 +38,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Offline-first with network fallback for app assets
+// Fetch: Network-First for navigation (SPA), Cache-First with revalidate for assets
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Allow Firebase Auth & Firestore requests to go through directly
-  // (Firebase JS SDK maintains its own robust IndexedDB local cache)
   if (
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('firebaseapp.com') ||
@@ -50,12 +51,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle SPA navigation requests
+  // Handle SPA navigation requests: ALWAYS try network first so updates load immediately
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('./index.html') || caches.match('/');
-      })
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match('./index.html') || caches.match('/');
+        })
     );
     return;
   }

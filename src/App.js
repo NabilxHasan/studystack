@@ -513,8 +513,16 @@ export default function App() {
       if (snap.exists()) {
         const d = snap.data();
         if (d.routineSchedule && Array.isArray(d.routineSchedule)) {
-          setRoutineSchedule(d.routineSchedule);
-          saveRoutineSchedule(d.routineSchedule);
+          const hasOldData = d.routineSchedule.some((t) => t.subject === "CTF" || t.subject === "AI Hackathon" || t.allocatedDurationMinutes);
+          if (hasOldData && (!d.version || d.version < 3)) {
+            setRoutineSchedule(DEFAULT_ROUTINE_SCHEDULE);
+            saveRoutineSchedule(DEFAULT_ROUTINE_SCHEDULE);
+            setDoc(ref, { ...d, version: 3, routineSchedule: DEFAULT_ROUTINE_SCHEDULE }, { merge: true });
+          } else {
+            const sanitized = d.routineSchedule.map(({ allocatedDurationMinutes, ...rest }) => rest);
+            setRoutineSchedule(sanitized);
+            saveRoutineSchedule(sanitized);
+          }
         }
         if (d.allDailyStates) {
           setAllDailyStates(d.allDailyStates);

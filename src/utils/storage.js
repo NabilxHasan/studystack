@@ -65,7 +65,12 @@ export function loadRoutineSchedule() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        const hasOldData = parsed.some((t) => t.subject === "CTF" || t.subject === "AI Hackathon" || t.allocatedDurationMinutes);
+        if (hasOldData) {
+          localStorage.setItem(KEYS.ROUTINE, JSON.stringify(DEFAULT_ROUTINE_SCHEDULE));
+          return DEFAULT_ROUTINE_SCHEDULE;
+        }
+        return parsed.map(({ allocatedDurationMinutes, ...rest }) => rest);
       }
     }
   } catch (e) {
