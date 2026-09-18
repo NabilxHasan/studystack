@@ -73,6 +73,13 @@ export const SUBJECT_THEMES = {
     icon: "🔄",
     defaultType: "revision"
   },
+  "Boot.dev": {
+    category: "skills",
+    color: "#f59e0b",
+    borderClass: "c-bootdev",
+    icon: "🚀",
+    defaultType: "self-study"
+  },
   "Skill Gain": {
     category: "skills",
     color: "#6366f1",
@@ -89,7 +96,7 @@ export const SUBJECT_THEMES = {
  * - Flexible study blocks without arbitrary time limits
  */
 export const DEFAULT_ROUTINE_SCHEDULE = [
-  // SUNDAY (Academics Priority)
+  // SUNDAY (Academics Priority - Physics brought from Friday, replacing Academic Revision)
   {
     id: "sun-block-1",
     day: "Sunday",
@@ -107,12 +114,12 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   {
     id: "sun-block-3",
     day: "Sunday",
-    subject: "Academic Revision",
-    notes: "Weekly Concept Review",
-    defaultTaskType: "revision"
+    subject: "Physics",
+    notes: "Core Theory & Problem Sets",
+    defaultTaskType: "lecture"
   },
 
-  // MONDAY (Academics Priority)
+  // MONDAY (Academics + Boot.dev)
   {
     id: "mon-block-1",
     day: "Monday",
@@ -130,12 +137,12 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   {
     id: "mon-block-3",
     day: "Monday",
-    subject: "Academic Revision",
-    notes: "Architecture & Data Comm Review",
-    defaultTaskType: "revision"
+    subject: "Boot.dev",
+    notes: "Backend / CS Fundamentals / Practice",
+    defaultTaskType: "self-study"
   },
 
-  // TUESDAY (Academics Priority)
+  // TUESDAY (Academics + Boot.dev)
   {
     id: "tue-block-1",
     day: "Tuesday",
@@ -153,12 +160,12 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   {
     id: "tue-block-3",
     day: "Tuesday",
-    subject: "Academic Revision",
-    notes: "Physics & DSA Problem Sets",
-    defaultTaskType: "revision"
+    subject: "Boot.dev",
+    notes: "Backend / CS Fundamentals / Practice",
+    defaultTaskType: "self-study"
   },
 
-  // WEDNESDAY (Academics Priority)
+  // WEDNESDAY (Academics + Boot.dev)
   {
     id: "wed-block-1",
     day: "Wednesday",
@@ -176,12 +183,12 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   {
     id: "wed-block-3",
     day: "Wednesday",
-    subject: "Academic Revision",
-    notes: "Math & Electrical Formulas",
-    defaultTaskType: "revision"
+    subject: "Boot.dev",
+    notes: "Backend / CS Fundamentals / Practice",
+    defaultTaskType: "self-study"
   },
 
-  // THURSDAY (Academics Priority)
+  // THURSDAY (Academics Priority - EEE brought from Saturday, replacing Academic Revision)
   {
     id: "thu-block-1",
     day: "Thursday",
@@ -199,9 +206,9 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   {
     id: "thu-block-3",
     day: "Thursday",
-    subject: "Academic Revision",
-    notes: "OOP & DSA Problem Sets",
-    defaultTaskType: "revision"
+    subject: "EEE",
+    notes: "Circuit Analysis & AC/DC",
+    defaultTaskType: "lecture"
   },
 
   // FRIDAY (Holiday - Academics + Weekend Skill Gain)
@@ -222,13 +229,6 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   {
     id: "fri-block-3",
     day: "Friday",
-    subject: "Physics",
-    notes: "Theory & Problem Sets",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "fri-block-4",
-    day: "Friday",
     subject: "Skill Gain",
     notes: "CTF / Hackathon / Game Dev / GIMP / DaVinci",
     defaultTaskType: "lab"
@@ -245,19 +245,12 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   {
     id: "sat-block-2",
     day: "Saturday",
-    subject: "EEE",
-    notes: "Circuit Analysis & AC/DC",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "sat-block-3",
-    day: "Saturday",
     subject: "Calculus",
     notes: "Problem Sets & Series",
     defaultTaskType: "lecture"
   },
   {
-    id: "sat-block-4",
+    id: "sat-block-3",
     day: "Saturday",
     subject: "Skill Gain",
     notes: "CTF / Hackathon / Game Dev / GIMP / DaVinci",
@@ -276,10 +269,10 @@ export const DSA_BREAKDOWN = {
 };
 
 export const EXECUTION_GUIDELINES = [
-  { id: 1, header: "Academics Priority:", desc: "Weekdays (Sun–Thu) are 100% focused on core academic courses, DSA, and OOP." },
+  { id: 1, header: "Academics Priority:", desc: "Core academic courses (Physics, EEE, Calculus, Architecture, Data Comm), DSA, and OOP." },
   { id: 2, header: "DSA Consistency:", desc: "Consistent sessions across Sun, Tue, Thu, Sat (Academic + LeetCode + Codeforces)." },
-  { id: 3, header: "OOP (Java):", desc: "Solidify Java, OOP fundamentals, design patterns, and lab tasks." },
-  { id: 4, header: "Academic Revision:", desc: "Dedicated daily revision blocks for deep conceptual retention and exam readiness." },
+  { id: 3, header: "OOP (Java) & Core:", desc: "Solidify Java, OOP fundamentals, design patterns, and lab tasks." },
+  { id: 4, header: "Boot.dev Progression:", desc: "Dedicated sessions on Mon, Tue, and Wed for backend, CS fundamentals, and practical development." },
   { id: 5, header: "Weekend Skill Gain:", desc: "Fridays & Saturdays dedicated to applied skills: CTF / Hackathon / Game Dev / GIMP / DaVinci." }
 ];
 

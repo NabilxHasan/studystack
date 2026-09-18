@@ -5,11 +5,11 @@
 
 import { DEFAULT_ROUTINE_SCHEDULE } from "../config/routineData";
 
-export const STORAGE_VERSION = 3;
+export const STORAGE_VERSION = 4;
 
 const KEYS = {
   VERSION: "sq_storage_version",
-  ROUTINE: "sq_routine_schedule_v3",
+  ROUTINE: "sq_routine_schedule_v4",
   DAILY_STATES: "sq_daily_task_states_v2",
   ACTIVE_TIMER: "sq_active_timer_session_v2",
   STUDY_LOG: "sq_study_log_v2",
@@ -65,7 +65,7 @@ export function loadRoutineSchedule() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const hasOldData = parsed.some((t) => t.subject === "CTF" || t.subject === "AI Hackathon" || t.allocatedDurationMinutes);
+        const hasOldData = parsed.some((t) => t.subject === "CTF" || t.subject === "AI Hackathon" || t.subject === "Academic Revision" || t.allocatedDurationMinutes);
         if (hasOldData) {
           localStorage.setItem(KEYS.ROUTINE, JSON.stringify(DEFAULT_ROUTINE_SCHEDULE));
           return DEFAULT_ROUTINE_SCHEDULE;

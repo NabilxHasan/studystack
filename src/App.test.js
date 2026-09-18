@@ -15,15 +15,32 @@ import { isDayGoalMet, computeStreakMetrics } from './utils/streakEngine';
 import App from './App';
 
 describe('StudyStack Routine & Timetable Configuration', () => {
-  test('has 7 schedule days, weekday academic focus, and weekend Skill Gain', () => {
+  test('has 7 schedule days, Physics on Sunday, EEE on Thursday, Boot.dev on weekdays, and weekend Skill Gain', () => {
     expect(DAYS).toHaveLength(7);
-    expect(DEFAULT_ROUTINE_SCHEDULE.length).toBeGreaterThan(20);
+    expect(DEFAULT_ROUTINE_SCHEDULE).toHaveLength(21); // exactly 3 sessions per day across 7 days
 
-    // Verify weekdays (Sunday - Thursday) are 100% academic courses, DSA, OOP, and Revision
+    // Sunday has Physics
+    const sundayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === "Sunday");
+    expect(sundayTasks.some(t => t.subject === "Physics")).toBe(true);
+
+    // Thursday has EEE
+    const thursdayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === "Thursday");
+    expect(thursdayTasks.some(t => t.subject === "EEE")).toBe(true);
+
+    // Monday, Tuesday, Wednesday have Boot.dev
+    ["Monday", "Tuesday", "Wednesday"].forEach((day) => {
+      const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
+      expect(dayTasks.some(t => t.subject === "Boot.dev")).toBe(true);
+    });
+
+    // Zero tasks have Academic Revision anywhere in the schedule
+    expect(DEFAULT_ROUTINE_SCHEDULE.some(t => t.subject === "Academic Revision")).toBe(false);
+
+    // Verify weekdays (Sunday - Thursday) are academic courses, DSA, OOP, and Boot.dev (no Skill Gain)
     const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
     weekdays.forEach((day) => {
       const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
-      expect(dayTasks.length).toBeGreaterThan(0);
+      expect(dayTasks).toHaveLength(3);
       dayTasks.forEach(task => {
         expect(task.subject).not.toBe("Skill Gain");
       });
@@ -32,7 +49,9 @@ describe('StudyStack Routine & Timetable Configuration', () => {
     // Verify Friday and Saturday have Skill Gain with obliques
     const weekendDays = ["Friday", "Saturday"];
     weekendDays.forEach((day) => {
-      const skillTask = DEFAULT_ROUTINE_SCHEDULE.find(t => t.day === day && t.subject === "Skill Gain");
+      const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
+      expect(dayTasks).toHaveLength(3);
+      const skillTask = dayTasks.find(t => t.subject === "Skill Gain");
       expect(skillTask).toBeDefined();
       expect(skillTask.notes).toContain("CTF / Hackathon / Game Dev / GIMP / DaVinci");
     });

@@ -11,8 +11,7 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
   const sessions = [
     { num: 1, label: "SESSION 1" },
     { num: 2, label: "SESSION 2" },
-    { num: 3, label: "SESSION 3" },
-    { num: 4, label: "SESSION 4" }
+    { num: 3, label: "SESSION 3" }
   ];
 
   return (
@@ -44,7 +43,7 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
             <tr>
               <th className="rt-th" style={{ width: "16%" }}>DAY</th>
               {sessions.map((s) => (
-                <th key={s.num} className="rt-th" style={{ width: "21%" }}>
+                <th key={s.num} className="rt-th" style={{ width: "28%" }}>
                   {s.label}
                 </th>
               ))}
@@ -66,8 +65,8 @@ export default function RoutineTable({ routineSchedule = [], onStartTaskTimer })
                     </div>
                   </td>
 
-                  {/* 4 Slots */}
-                  {[0, 1, 2, 3].map((slotIdx) => {
+                  {/* 3 Slots */}
+                  {[0, 1, 2].map((slotIdx) => {
                     const task = dayTasks[slotIdx];
                     if (!task) {
                       return (
