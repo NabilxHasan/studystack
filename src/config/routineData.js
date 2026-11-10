@@ -56,8 +56,8 @@ export const UNI_CLASSES = {
     { time: "11:35–12:45", code: "MATH-2107", subject: "Calculus" }
   ],
   Tuesday: [
-    { time: "10:15–12:45", code: "CSE-2106", subject: "Microprocessor Lab", room: "706", group: "GB" },
-    { time: "1:20–4:00", code: "CSE-2106", subject: "Microprocessor Lab", room: "709", group: "GA" }
+    // Group B slot (Group A has the 1:20–4:00 lab in #709)
+    { time: "10:15–12:45", code: "CSE-2106", subject: "Microprocessor Lab", room: "706", group: "GB" }
   ],
   Wednesday: [
     { time: "9:00–10:15", code: "CSE-2109", subject: "Data Communication" },

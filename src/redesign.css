@@ -100,7 +100,7 @@ input:focus-visible {
 .cyber-logo .cl-line { letter-spacing: 4px; padding-left: 4px; }
 .cyber-logo .cl-main { background: none; -webkit-text-fill-color: var(--text); color: var(--text); filter: none; }
 .cyber-logo .cl-glitch { display: none; }
-.active-timer-banner { top: 56px; }
+.active-timer-banner { top: calc(56px + env(safe-area-inset-top)); }
 
 .main-content-wrap {
   max-width: 760px;
@@ -112,7 +112,8 @@ input:focus-visible {
   position: sticky;
   top: 0;
   z-index: 100;
-  height: 56px;
+  /* Standalone iOS draws the page under the status bar / notch: keep the bar's content below it */
+  padding-top: env(safe-area-inset-top);
   background: var(--header-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -120,7 +121,7 @@ input:focus-visible {
 }
 .hd-inner {
   max-width: 1060px;
-  height: 100%;
+  height: 56px;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
