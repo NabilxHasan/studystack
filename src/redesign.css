@@ -75,12 +75,13 @@
   --header-bg: rgba(244, 244, 240, 0.9);
 }
 
+/* Opacity only and no fill-mode: a transform (or a lingering animation) on this wrapper would
+   become the containing block for the position:fixed focus overlay and modals inside it. */
 .fade-in {
-  animation: ssFadeIn 0.22s ease-out both;
+  animation: ssFadeIn 0.2s ease-out;
 }
 @keyframes ssFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fade-in { animation: none; }
