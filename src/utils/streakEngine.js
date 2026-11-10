@@ -1,34 +1,41 @@
 /**
- * Streak Engine & Historical Tracking Logic
- * Calculates streaks, completion metrics, and date transitions with streak freeze support.
+ * Streak Engine
+ * A day counts as "committed" when at least 70% of that day's blocks are done
+ * OR at least 3 hours were logged on the timer.
  */
 
 import { DAYS } from "../config/routineData";
 import { dateStr } from "./storage";
 
-/**
- * Check if the daily goal was met for a specific date
- * Threshold: At least 70% of scheduled tasks completed OR at least 3 hours studied
- */
+export const GOAL_RATE = 0.7;
+export const GOAL_SECONDS = 10800;
+
+/** How many blocks must be completed for a day with `total` blocks. */
+export function blocksNeeded(total) {
+  return Math.ceil(total * GOAL_RATE - 1e-9);
+}
+
 export function isDayGoalMet(targetDateStr, routineSchedule, allDailyStates, studyLog) {
   const [y, m, d] = targetDateStr.split("-").map(Number);
   const dateObj = new Date(y, m - 1, d);
   const dayName = DAYS[dateObj.getDay()];
 
-  const dayTasks = routineSchedule.filter(t => t.day === dayName);
+  const dayTasks = routineSchedule.filter((t) => t.day === dayName);
   const taskStates = allDailyStates[targetDateStr] || {};
-
   const totalTasks = dayTasks.length;
-  const completedTasks = dayTasks.filter(t => {
-    const s = taskStates[t.id];
-    return s && (s.status === "completed" || s === "completed");
-  }).length;
+
+  // Count every completed entry saved for that date (capped at the day's block count),
+  // so history survives when the routine itself is changed later.
+  const completedEntries = Object.values(taskStates).filter(
+    (s) => s && (s.status === "completed" || s === "completed")
+  ).length;
+  const completedTasks = Math.min(totalTasks, completedEntries);
 
   const secondsStudied = studyLog[targetDateStr] || 0;
-  const taskCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) : 1;
+  const taskCompletionRate = totalTasks > 0 ? completedTasks / totalTasks : 1;
 
-  // 70% tasks completed OR at least 3 hours (10,800s) studied
-  const isMet = (totalTasks > 0 && taskCompletionRate >= 0.70) || (secondsStudied >= 10800);
+  const isMet =
+    (totalTasks > 0 && completedTasks >= blocksNeeded(totalTasks)) || secondsStudied >= GOAL_SECONDS;
 
   return {
     date: targetDateStr,
@@ -42,105 +49,63 @@ export function isDayGoalMet(targetDateStr, routineSchedule, allDailyStates, stu
   };
 }
 
-/**
- * Calculate streak metrics across history
- */
-export function computeStreakMetrics({
-  routineSchedule = [],
-  allDailyStates = {},
-  studyLog = {},
-  streakFreezeEnabled = false
-}) {
+export function computeStreakMetrics({ routineSchedule = [], allDailyStates = {}, studyLog = {} }) {
   const today = dateStr();
+  const now = new Date();
   const todayMetrics = isDayGoalMet(today, routineSchedule, allDailyStates, studyLog);
 
-  let currentStreak = 0;
-  let lastCompletedDate = null;
-  let freezeUsedForCurrent = false;
-
-  // Check today first
-  if (todayMetrics.isMet) {
-    currentStreak += 1;
-    lastCompletedDate = today;
+  // Current streak: today (if done) + consecutive committed days before it.
+  // Today not being done yet does not break the streak; yesterday missing does.
+  let currentStreak = todayMetrics.isMet ? 1 : 0;
+  for (let i = 1; i <= 730; i++) {
+    const past = new Date(now);
+    past.setDate(now.getDate() - i);
+    const metrics = isDayGoalMet(dateStr(past), routineSchedule, allDailyStates, studyLog);
+    if (metrics.isMet) currentStreak += 1;
+    else if (metrics.isRestDay) continue;
+    else break;
   }
 
-  // Look back consecutive days starting from yesterday
-  const now = new Date();
-  for (let i = 1; i <= 365; i++) {
-    const pastDate = new Date(now);
-    pastDate.setDate(now.getDate() - i);
-    const pastStr = dateStr(pastDate);
+  // Every committed day on record
+  const recordedDates = new Set([...Object.keys(allDailyStates), ...Object.keys(studyLog)]);
+  const committedDates = [...recordedDates]
+    .filter((ds) => /^\d{4}-\d{2}-\d{2}$/.test(ds))
+    .filter((ds) => isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog).isMet)
+    .sort();
+  const totalDays = committedDates.length;
 
-    const metrics = isDayGoalMet(pastStr, routineSchedule, allDailyStates, studyLog);
-
-    if (metrics.isMet) {
-      currentStreak += 1;
-      if (!lastCompletedDate) {
-        lastCompletedDate = pastStr;
-      }
-    } else if (metrics.isRestDay) {
-      // Rest day with 0 tasks does not break streak
-      continue;
-    } else {
-      // Day was missed
-      if (streakFreezeEnabled && !freezeUsedForCurrent) {
-        freezeUsedForCurrent = true;
-        // Protected by streak freeze for 1 missed day
-        continue;
-      } else {
-        // Streak breaks
-        break;
-      }
-    }
-  }
-
-  // Calculate historical longest streak over the past 90 days
+  // Longest run of consecutive calendar days
   let longestStreak = currentStreak;
-  let runningRun = 0;
-  const history = [];
+  let run = 0;
+  let prev = null;
+  committedDates.forEach((ds) => {
+    const [y, m, d] = ds.split("-").map(Number);
+    const cur = new Date(y, m - 1, d);
+    run = prev && Math.round((cur - prev) / 86400000) === 1 ? run + 1 : 1;
+    if (run > longestStreak) longestStreak = run;
+    prev = cur;
+  });
 
-  for (let i = 89; i >= 0; i--) {
+  // Last 7 days, oldest first
+  const week = [];
+  for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(now.getDate() - i);
-    const dStr = dateStr(d);
-    const m = isDayGoalMet(dStr, routineSchedule, allDailyStates, studyLog);
-
-    const isToday = dStr === today;
-    let status = "missed";
-    if (isToday) {
-      status = m.isMet ? "done" : "today";
-    } else if (m.isMet) {
-      status = "done";
-    } else if (m.isRestDay) {
-      status = "rest";
-    }
-
-    if (m.isMet) {
-      runningRun += 1;
-      if (runningRun > longestStreak) {
-        longestStreak = runningRun;
-      }
-    } else if (!m.isRestDay && !isToday) {
-      runningRun = 0;
-    }
-
-    history.push({
-      dateStr: dStr,
-      date: d,
-      status,
-      completed: m.completedTasks,
-      total: m.totalTasks,
-      seconds: m.secondsStudied,
-      isMet: m.isMet
+    const ds = dateStr(d);
+    const m = isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog);
+    week.push({
+      dateStr: ds,
+      dayShort: DAYS[d.getDay()].slice(0, 3),
+      isToday: ds === today,
+      status: m.isMet ? "done" : ds === today ? "today" : "missed"
     });
   }
 
   return {
     currentStreak,
     longestStreak,
-    lastCompletedDate,
+    totalDays,
     todayProgress: todayMetrics,
-    streakFreezeEnabled,
-    history
+    week
   };
 }

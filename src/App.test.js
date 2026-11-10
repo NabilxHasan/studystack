@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { DAYS, DEFAULT_ROUTINE_SCHEDULE, DSA_BREAKDOWN } from './config/routineData';
+import { DAYS, DEFAULT_ROUTINE_SCHEDULE, ROADMAP_SUBJECT, UNI_CLASSES, COURSES, isLegacySchedule } from './config/routineData';
+import { ROADMAP, ROADMAP_ITEMS, roadmapStats } from './config/roadmapData';
 import {
   saveRoutineSchedule,
   loadRoutineSchedule,
@@ -9,64 +10,73 @@ import {
   saveActiveTimerSession,
   loadActiveTimerSession,
   clearActiveTimerSession,
+  saveRoadmapProgress,
+  loadRoadmapProgress,
   dateStr
 } from './utils/storage';
 import { isDayGoalMet, computeStreakMetrics } from './utils/streakEngine';
 import App from './App';
 
-describe('StudyStack Routine & Timetable Configuration', () => {
-  test('has 7 schedule days, Physics on Sunday, EEE on Thursday, Boot.dev on weekdays, and weekend Skill Gain', () => {
+describe('StudyStack Routine Configuration', () => {
+  test('every day has study blocks and ends with exactly one roadmap block', () => {
     expect(DAYS).toHaveLength(7);
-    expect(DEFAULT_ROUTINE_SCHEDULE).toHaveLength(21); // exactly 3 sessions per day across 7 days
-
-    // Sunday has Physics
-    const sundayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === "Sunday");
-    expect(sundayTasks.some(t => t.subject === "Physics")).toBe(true);
-
-    // Thursday has EEE
-    const thursdayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === "Thursday");
-    expect(thursdayTasks.some(t => t.subject === "EEE")).toBe(true);
-
-    // Monday, Tuesday, Wednesday have Boot.dev
-    ["Monday", "Tuesday", "Wednesday"].forEach((day) => {
+    DAYS.forEach((day) => {
       const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
-      expect(dayTasks.some(t => t.subject === "Boot.dev")).toBe(true);
+      expect(dayTasks.length).toBeGreaterThanOrEqual(3);
+      expect(dayTasks.filter(t => t.subject === ROADMAP_SUBJECT)).toHaveLength(1);
+      expect(dayTasks[dayTasks.length - 1].subject).toBe(ROADMAP_SUBJECT);
     });
-
-    // Zero tasks have Academic Revision anywhere in the schedule
-    expect(DEFAULT_ROUTINE_SCHEDULE.some(t => t.subject === "Academic Revision")).toBe(false);
-
-    // Verify weekdays (Sunday - Thursday) are academic courses, DSA, OOP, and Boot.dev (no Skill Gain)
-    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
-    weekdays.forEach((day) => {
-      const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
-      expect(dayTasks).toHaveLength(3);
-      dayTasks.forEach(task => {
-        expect(task.subject).not.toBe("Skill Gain");
-      });
-    });
-
-    // Verify Friday and Saturday have Skill Gain with obliques
-    const weekendDays = ["Friday", "Saturday"];
-    weekendDays.forEach((day) => {
-      const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
-      expect(dayTasks).toHaveLength(3);
-      const skillTask = dayTasks.find(t => t.subject === "Skill Gain");
-      expect(skillTask).toBeDefined();
-      expect(skillTask.notes).toContain("CTF / Hackathon / Game Dev / GIMP / DaVinci");
-    });
+    const ids = DEFAULT_ROUTINE_SCHEDULE.map(t => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test('DSA 50/30/20 ratio definition matches requirements', () => {
-    expect(DSA_BREAKDOWN.sessions).toBe(4);
-    const dist = DSA_BREAKDOWN.distribution;
-    const academic = dist.find(d => d.title.includes('Academic'));
-    const leetcode = dist.find(d => d.title.includes('LeetCode'));
-    const cf = dist.find(d => d.title.includes('Codeforces'));
+  test('covers all current courses and both backlogs, with no dropped skills', () => {
+    const subjects = new Set(DEFAULT_ROUTINE_SCHEDULE.map(t => t.subject));
+    ["OOP", "Data Communication", "Microprocessor", "DSA", "Calculus", "Physics", "EEE"].forEach((s) => {
+      expect(DEFAULT_ROUTINE_SCHEDULE.filter(t => t.subject === s).length).toBeGreaterThanOrEqual(2);
+    });
+    ["Boot.dev", "Skill Gain", "Academic Revision"].forEach((s) => expect(subjects.has(s)).toBe(false));
+    expect(isLegacySchedule(DEFAULT_ROUTINE_SCHEDULE)).toBe(false);
+    expect(isLegacySchedule([{ id: "mon-block-3", day: "Monday", subject: "Boot.dev" }])).toBe(true);
+  });
 
-    expect(academic.percent).toBe(50);
-    expect(leetcode.percent).toBe(30);
-    expect(cf.percent).toBe(20);
+  test('university timetable matches the class routine', () => {
+    expect(UNI_CLASSES.Friday).toHaveLength(0);
+    expect(UNI_CLASSES.Saturday).toHaveLength(0);
+    expect(UNI_CLASSES.Monday.map(c => c.code)).toEqual(["CSE-2109", "CSE-2105", "MATH-2107"]);
+    expect(UNI_CLASSES.Thursday.map(c => c.code)).toEqual(["CSE-2101", "MATH-2107", "CSE-2103", "CSE-2102"]);
+    Object.values(UNI_CLASSES).flat().forEach((c) => expect(COURSES[c.code]).toBe(c.subject));
+  });
+});
+
+describe('Cyber Security Roadmap', () => {
+  test('has unique topic ids and the six core phases', () => {
+    const ids = ROADMAP_ITEMS.map(i => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ROADMAP.filter(p => !p.optional).map(p => p.title)).toEqual([
+      "Fundamental IT Skills",
+      "Operating Systems",
+      "Networking Knowledge",
+      "Security Skills and Knowledge",
+      "Cloud Skills and Knowledge",
+      "Programming Skills"
+    ]);
+    expect(ids.length).toBeGreaterThan(250);
+  });
+
+  test('progress stats count completed core topics and point at the next one', () => {
+    const empty = roadmapStats({});
+    expect(empty.done).toBe(0);
+    expect(empty.next.id).toBe(ROADMAP_ITEMS[0].id);
+    const one = roadmapStats({ [ROADMAP_ITEMS[0].id]: true });
+    expect(one.done).toBe(1);
+    expect(one.next.id).toBe(ROADMAP_ITEMS[1].id);
+  });
+
+  test('roadmap progress persists', () => {
+    localStorage.clear();
+    saveRoadmapProgress({ "it.core.x": true });
+    expect(loadRoadmapProgress()).toEqual({ "it.core.x": true });
   });
 });
 
@@ -153,11 +163,22 @@ describe('StudyStack Streak Engine', () => {
     const metrics = computeStreakMetrics({
       routineSchedule: DEFAULT_ROUTINE_SCHEDULE,
       allDailyStates: {},
-      studyLog,
-      streakFreezeEnabled: false
+      studyLog
     });
 
     expect(metrics.currentStreak).toBe(2);
+    expect(metrics.totalDays).toBe(2);
+    expect(metrics.week).toHaveLength(7);
+  });
+});
+
+describe('Streak history survives routine changes', () => {
+  test('a past day completed under old block ids still counts', () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = dateStr(yesterday);
+    const states = { [yStr]: { "x-block-1": { status: "completed" }, "x-block-2": { status: "completed" }, "x-block-3": { status: "completed" } } };
+    expect(isDayGoalMet(yStr, DEFAULT_ROUTINE_SCHEDULE, states, {}).isMet).toBe(true);
   });
 });
 

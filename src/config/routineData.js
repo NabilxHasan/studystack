@@ -1,284 +1,145 @@
 /**
- * Academic-Focused Weekly Routine Configuration
- * Priority on core academic courses, DSA, OOP, and weekend Skill Gain
+ * Weekly study routine built around the university class timetable (2nd year, 1st semester).
+ *
+ * - UNI_CLASSES: fixed class slots (information only, shown on the Today screen).
+ * - DEFAULT_ROUTINE_SCHEDULE: flexible self-study blocks for after class. No durations.
+ *   Every day ends with one Cyber Security Roadmap block.
  */
 
 export const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 export const DAYS_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
+export const ROADMAP_SUBJECT = "Cyber Security Roadmap";
+
 export const DAY_METADATA = {
-  Sunday:    { tag: "REGULAR",    bgClass: "bg-sun", color: "#e11d48" },
-  Monday:    { tag: "REGULAR",    bgClass: "bg-mon", color: "#2563eb" },
-  Tuesday:   { tag: "REGULAR",    bgClass: "bg-tue", color: "#059669" },
-  Wednesday: { tag: "REGULAR",    bgClass: "bg-wed", color: "#7c3aed" },
-  Thursday:  { tag: "REGULAR",    bgClass: "bg-thu", color: "#d97706" },
-  Friday:    { tag: "HOLIDAY",    bgClass: "bg-fri", color: "#0891b2" },
-  Saturday:  { tag: "WEEKLY OFF", bgClass: "bg-sat", color: "#db2777" },
+  Sunday:    { tag: "CLASS DAY" },
+  Monday:    { tag: "CLASS DAY" },
+  Tuesday:   { tag: "LAB DAY" },
+  Wednesday: { tag: "CLASS DAY" },
+  Thursday:  { tag: "LONG DAY" },
+  Friday:    { tag: "DEEP WORK" },
+  Saturday:  { tag: "DEEP WORK" }
+};
+
+/** Course code → subject, from the university routine. */
+export const COURSES = {
+  "CSE-2101": "DSA",
+  "CSE-2102": "DSA Lab",
+  "CSE-2103": "OOP",
+  "CSE-2104": "OOP Lab",
+  "CSE-2105": "Microprocessor",
+  "CSE-2106": "Microprocessor Lab",
+  "CSE-2109": "Data Communication",
+  "MATH-2107": "Calculus"
 };
 
 export const SUBJECT_THEMES = {
-  "DSA": {
-    category: "dsa",
-    color: "#f43f5e",
-    borderClass: "c-dsa",
-    icon: "⚡",
-    defaultType: "self-study"
-  },
-  "OOP (Java)": {
-    category: "academics",
-    color: "#10b981",
-    borderClass: "c-oop",
-    icon: "☕",
-    defaultType: "lecture"
-  },
-  "Comp Architecture & Microprocessor": {
-    category: "academics",
-    color: "#38bdf8",
-    borderClass: "c-arch",
-    icon: "💻",
-    defaultType: "lecture"
-  },
-  "Data Communication": {
-    category: "academics",
-    color: "#06b6d4",
-    borderClass: "c-datacom",
-    icon: "📡",
-    defaultType: "lecture"
-  },
-  "Physics": {
-    category: "academics",
-    color: "#38bdf8",
-    borderClass: "c-phy",
-    icon: "⚛️",
-    defaultType: "lecture"
-  },
-  "EEE": {
-    category: "academics",
-    color: "#a855f7",
-    borderClass: "c-eee",
-    icon: "🔌",
-    defaultType: "lecture"
-  },
-  "Calculus": {
-    category: "academics",
-    color: "#38bdf8",
-    borderClass: "c-calc",
-    icon: "📐",
-    defaultType: "lecture"
-  },
-  "Academic Revision": {
-    category: "revision",
-    color: "#8b5cf6",
-    borderClass: "c-rev",
-    icon: "🔄",
-    defaultType: "revision"
-  },
-  "Boot.dev": {
-    category: "skills",
-    color: "#f59e0b",
-    borderClass: "c-bootdev",
-    icon: "🚀",
-    defaultType: "self-study"
-  },
-  "Skill Gain": {
-    category: "skills",
-    color: "#6366f1",
-    borderClass: "c-skill",
-    icon: "🛠️",
-    defaultType: "lab"
-  }
+  "DSA":                { color: "#ff5d73", short: "DSA" },
+  "OOP":                { color: "#34d399", short: "OOP" },
+  "Microprocessor":     { color: "#38bdf8", short: "MPU" },
+  "Data Communication": { color: "#22d3ee", short: "DCOM" },
+  "Calculus":           { color: "#fbbf24", short: "CALC" },
+  "Physics":            { color: "#a78bfa", short: "PHY" },
+  "EEE":                { color: "#f472b6", short: "EEE" },
+  [ROADMAP_SUBJECT]:    { color: "#c6f432", short: "SEC" }
 };
+
+/** Fixed university classes. Friday and Saturday are off. */
+export const UNI_CLASSES = {
+  Sunday: [
+    { time: "9:00–10:15", code: "CSE-2103", subject: "OOP" },
+    { time: "10:15–12:45", code: "CSE-2104", subject: "OOP Lab", room: "706" }
+  ],
+  Monday: [
+    { time: "9:00–10:15", code: "CSE-2109", subject: "Data Communication" },
+    { time: "10:15–11:30", code: "CSE-2105", subject: "Microprocessor" },
+    { time: "11:35–12:45", code: "MATH-2107", subject: "Calculus" }
+  ],
+  Tuesday: [
+    { time: "10:15–12:45", code: "CSE-2106", subject: "Microprocessor Lab", room: "706", group: "GB" },
+    { time: "1:20–4:00", code: "CSE-2106", subject: "Microprocessor Lab", room: "709", group: "GA" }
+  ],
+  Wednesday: [
+    { time: "9:00–10:15", code: "CSE-2109", subject: "Data Communication" },
+    { time: "10:15–11:30", code: "CSE-2105", subject: "Microprocessor" },
+    { time: "11:35–12:45", code: "CSE-2101", subject: "DSA" }
+  ],
+  Thursday: [
+    { time: "9:00–10:15", code: "CSE-2101", subject: "DSA" },
+    { time: "10:15–11:30", code: "MATH-2107", subject: "Calculus" },
+    { time: "11:35–12:45", code: "CSE-2103", subject: "OOP" },
+    { time: "1:20–4:00", code: "CSE-2102", subject: "DSA Lab", room: "707" }
+  ],
+  Friday: [],
+  Saturday: []
+};
+
+function block(day, n, subject, notes, kind) {
+  return { id: `${day.slice(0, 3).toLowerCase()}-s${n}`, day, subject, notes, kind };
+}
+function roadmapBlock(day, notes) {
+  return {
+    id: `${day.slice(0, 3).toLowerCase()}-roadmap`,
+    day,
+    subject: ROADMAP_SUBJECT,
+    notes,
+    kind: "roadmap"
+  };
+}
 
 /**
- * Academic-priority routine:
- * - Sunday to Thursday: 100% Core Academics, DSA, OOP, and Revision
- * - Friday & Saturday: Academics + Weekend Skill Gain (CTF / Hackathon / Game Dev / GIMP / DaVinci)
- * - Flexible study blocks without arbitrary time limits
+ * kind: "review"  → revise what was taught in class
+ *       "practice"→ problem solving
+ *       "backlog" → backlog course (Physics, EEE)
+ *       "roadmap" → cyber security roadmap slot
  */
 export const DEFAULT_ROUTINE_SCHEDULE = [
-  // SUNDAY (Academics Priority - Physics brought from Friday, replacing Academic Revision)
-  {
-    id: "sun-block-1",
-    day: "Sunday",
-    subject: "DSA",
-    notes: "Academic / LeetCode / Codeforces",
-    defaultTaskType: "self-study"
-  },
-  {
-    id: "sun-block-2",
-    day: "Sunday",
-    subject: "OOP (Java)",
-    notes: "Core Concepts & Practice",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "sun-block-3",
-    day: "Sunday",
-    subject: "Physics",
-    notes: "Core Theory & Problem Sets",
-    defaultTaskType: "lecture"
-  },
+  // SUNDAY — OOP theory + lab in class
+  block("Sunday", 1, "OOP", "Rewrite today's lecture + finish the lab task", "review"),
+  block("Sunday", 2, "Calculus", "Get ahead before Monday's class", "review"),
+  roadmapBlock("Sunday", "Evening slot, after the academic blocks"),
 
-  // MONDAY (Academics + Boot.dev)
-  {
-    id: "mon-block-1",
-    day: "Monday",
-    subject: "Comp Architecture & Microprocessor",
-    notes: "Architecture & Instruction Sets",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "mon-block-2",
-    day: "Monday",
-    subject: "Data Communication",
-    notes: "Protocols & Signals",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "mon-block-3",
-    day: "Monday",
-    subject: "Boot.dev",
-    notes: "Backend / CS Fundamentals / Practice",
-    defaultTaskType: "self-study"
-  },
+  // MONDAY — DataCom, Microprocessor, Calculus in class
+  block("Monday", 1, "Data Communication", "Revise today's lecture", "review"),
+  block("Monday", 2, "Microprocessor", "Revise today's lecture, prep for Tuesday's lab", "review"),
+  roadmapBlock("Monday", "Evening slot, after the academic blocks"),
 
-  // TUESDAY (Academics + Boot.dev)
-  {
-    id: "tue-block-1",
-    day: "Tuesday",
-    subject: "DSA",
-    notes: "Academic / LeetCode / Codeforces",
-    defaultTaskType: "self-study"
-  },
-  {
-    id: "tue-block-2",
-    day: "Tuesday",
-    subject: "Physics",
-    notes: "Core Theory & Problems",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "tue-block-3",
-    day: "Tuesday",
-    subject: "Boot.dev",
-    notes: "Backend / CS Fundamentals / Practice",
-    defaultTaskType: "self-study"
-  },
+  // TUESDAY — only the Microprocessor lab, lightest uni day
+  block("Tuesday", 1, "Microprocessor", "Write up the lab while it is fresh", "review"),
+  block("Tuesday", 2, "DSA", "Problem solving before Wednesday's class", "practice"),
+  block("Tuesday", 3, "Physics", "Backlog: clear one chapter section", "backlog"),
+  roadmapBlock("Tuesday", "Free afternoon or evening, longest weekday slot"),
 
-  // WEDNESDAY (Academics + Boot.dev)
-  {
-    id: "wed-block-1",
-    day: "Wednesday",
-    subject: "EEE",
-    notes: "Circuits & Electrical Analysis",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "wed-block-2",
-    day: "Wednesday",
-    subject: "Calculus",
-    notes: "Differentiation & Integrals",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "wed-block-3",
-    day: "Wednesday",
-    subject: "Boot.dev",
-    notes: "Backend / CS Fundamentals / Practice",
-    defaultTaskType: "self-study"
-  },
+  // WEDNESDAY — DataCom, Microprocessor, DSA in class
+  block("Wednesday", 1, "Data Communication", "Revise today's lecture", "review"),
+  block("Wednesday", 2, "DSA", "Revise today's lecture, prep for Thursday's lab", "review"),
+  roadmapBlock("Wednesday", "Evening slot, after the academic blocks"),
 
-  // THURSDAY (Academics Priority - EEE brought from Saturday, replacing Academic Revision)
-  {
-    id: "thu-block-1",
-    day: "Thursday",
-    subject: "DSA",
-    notes: "Academic / LeetCode / Codeforces",
-    defaultTaskType: "self-study"
-  },
-  {
-    id: "thu-block-2",
-    day: "Thursday",
-    subject: "OOP (Java)",
-    notes: "Object-Oriented Design & Lab",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "thu-block-3",
-    day: "Thursday",
-    subject: "EEE",
-    notes: "Circuit Analysis & AC/DC",
-    defaultTaskType: "lecture"
-  },
+  // THURSDAY — 9:00 to 4:00 in class, keep the evening short
+  block("Thursday", 1, "OOP", "Revise today's lecture", "review"),
+  block("Thursday", 2, "Calculus", "Revise today's lecture, solve the exercise set", "review"),
+  roadmapBlock("Thursday", "Short night slot, one topic is enough"),
 
-  // FRIDAY (Holiday - Academics + Weekend Skill Gain)
-  {
-    id: "fri-block-1",
-    day: "Friday",
-    subject: "Comp Architecture & Microprocessor",
-    notes: "Microprocessor Lab & Assembly",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "fri-block-2",
-    day: "Friday",
-    subject: "Data Communication",
-    notes: "Network Layers & Transmission",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "fri-block-3",
-    day: "Friday",
-    subject: "Skill Gain",
-    notes: "CTF / Hackathon / Game Dev / GIMP / DaVinci",
-    defaultTaskType: "lab"
-  },
+  // FRIDAY — no classes
+  block("Friday", 1, "Physics", "Backlog: theory + problem set", "backlog"),
+  block("Friday", 2, "EEE", "Backlog: circuits + problem set", "backlog"),
+  block("Friday", 3, "DSA", "Problem solving", "practice"),
+  roadmapBlock("Friday", "Long slot, go deep"),
 
-  // SATURDAY (Weekly Off - Academics + Weekend Skill Gain)
-  {
-    id: "sat-block-1",
-    day: "Saturday",
-    subject: "DSA",
-    notes: "Academic / LeetCode / Codeforces",
-    defaultTaskType: "self-study"
-  },
-  {
-    id: "sat-block-2",
-    day: "Saturday",
-    subject: "Calculus",
-    notes: "Problem Sets & Series",
-    defaultTaskType: "lecture"
-  },
-  {
-    id: "sat-block-3",
-    day: "Saturday",
-    subject: "Skill Gain",
-    notes: "CTF / Hackathon / Game Dev / GIMP / DaVinci",
-    defaultTaskType: "lab"
-  }
+  // SATURDAY — no classes
+  block("Saturday", 1, "EEE", "Backlog: theory + problem set", "backlog"),
+  block("Saturday", 2, "Calculus", "Problem sets, close the week's gaps", "practice"),
+  roadmapBlock("Saturday", "Long slot, go deep")
 ];
 
-export const DSA_BREAKDOWN = {
-  sessions: 4,
-  days: ["Sunday", "Tuesday", "Thursday", "Saturday"],
-  distribution: [
-    { title: "Academic DSA", percent: 50, color: "#f43f5e" },
-    { title: "LeetCode Practice", percent: 30, color: "#10b981" },
-    { title: "Codeforces Practice", percent: 20, color: "#38bdf8" }
-  ]
-};
-
-export const EXECUTION_GUIDELINES = [
-  { id: 1, header: "Academics Priority:", desc: "Core academic courses (Physics, EEE, Calculus, Architecture, Data Comm), DSA, and OOP." },
-  { id: 2, header: "DSA Consistency:", desc: "Consistent sessions across Sun, Tue, Thu, Sat (Academic + LeetCode + Codeforces)." },
-  { id: 3, header: "OOP (Java) & Core:", desc: "Solidify Java, OOP fundamentals, design patterns, and lab tasks." },
-  { id: 4, header: "Boot.dev Progression:", desc: "Dedicated sessions on Mon, Tue, and Wed for backend, CS fundamentals, and practical development." },
-  { id: 5, header: "Weekend Skill Gain:", desc: "Fridays & Saturdays dedicated to applied skills: CTF / Hackathon / Game Dev / GIMP / DaVinci." }
-];
-
-export const MOTTO = {
-  growth: "BALANCED ROUTINE & STEADY ACADEMIC GROWTH",
-  phil: "Plan > Execute > Review > Improve",
-  motto: "Stay Consistent, Stay Ahead!",
-  dedication: "You've got this, Nabil! ★"
-};
+/** Ids/subjects that only existed in older default schedules. Used to migrate saved data. */
+export function isLegacySchedule(schedule) {
+  if (!Array.isArray(schedule)) return true;
+  return schedule.some(
+    (t) =>
+      !t ||
+      /-block-\d+$/.test(t.id || "") ||
+      ["Boot.dev", "Skill Gain", "CTF", "AI Hackathon", "Academic Revision"].includes(t.subject) ||
+      t.allocatedDurationMinutes
+  );
+}

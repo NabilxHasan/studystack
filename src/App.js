@@ -21,7 +21,10 @@ import {
 } from "firebase/firestore";
 
 import {
-  DEFAULT_ROUTINE_SCHEDULE
+  DAYS,
+  DEFAULT_ROUTINE_SCHEDULE,
+  ROADMAP_SUBJECT,
+  isLegacySchedule
 } from "./config/routineData";
 
 import {
@@ -35,8 +38,8 @@ import {
   loadStudyLog,
   saveStudyLog,
   recordStudyTime,
-  loadStreakFreeze,
-  saveStreakFreeze,
+  loadRoadmapProgress,
+  saveRoadmapProgress,
   isGuestMode,
   setGuestMode,
   dateStr as getStorageDateStr
@@ -44,14 +47,15 @@ import {
 
 import { computeStreakMetrics } from "./utils/streakEngine";
 
-import RoutineChecklist from "./components/RoutineChecklist";
-import RoutineTable from "./components/RoutineTable";
+import TodayView from "./components/TodayView";
+import RoadmapView from "./components/RoadmapView";
 import StudyTimer from "./components/StudyTimer";
 import StreakView from "./components/StreakView";
 import ActiveTimerBanner from "./components/ActiveTimerBanner";
 import CustomCursor from "./components/CustomCursor";
 
 import "./App.css";
+import "./redesign.css";
 
 // ── FIREBASE CONFIGURATION & OFFLINE PERSISTENCE ──
 const firebaseConfig = {
@@ -188,7 +192,7 @@ function AuthScreen({ onGuest }) {
       <div className="auth-card-clean">
         <div className="auth-header">
           <CyberLogo className="auth-cyber" />
-          <div className="auth-sub">Routine &amp; Productivity Engine</div>
+          <div className="auth-sub">Show up every day. Build the life.</div>
         </div>
 
         <div className="auth-tab-row">
@@ -304,6 +308,13 @@ function SettingsModal({ user, username, onUsername, onClose }) {
   );
 }
 
+const NAV_ITEMS = [
+  { id: "routine", label: "Today", glyph: "◉" },
+  { id: "roadmap", label: "Roadmap", glyph: "⌁" },
+  { id: "study", label: "Focus", glyph: "◷" },
+  { id: "streak", label: "Streak", glyph: "▲" }
+];
+
 // ── MAIN APPLICATION ──
 export default function App() {
   const [user, setUser] = useState(null);
@@ -336,7 +347,7 @@ export default function App() {
   const [routineSchedule, setRoutineSchedule] = useState(() => loadRoutineSchedule());
   const [allDailyStates, setAllDailyStates] = useState(() => loadAllDailyStates());
   const [studyLog, setStudyLog] = useState(() => loadStudyLog());
-  const [streakFreeze, setStreakFreeze] = useState(() => loadStreakFreeze());
+  const [roadmapProgress, setRoadmapProgress] = useState(() => loadRoadmapProgress());
   const [activeSession, setActiveTimerSession] = useState(() => loadActiveTimerSession());
   const [selectedDate, setSelectedDate] = useState(() => getStorageDateStr());
   const [todayDateStr, setTodayDateStr] = useState(() => getStorageDateStr());
@@ -470,7 +481,7 @@ export default function App() {
 
   // Profile / user
   const [username, setUsername] = useState("");
-  const [view, setView] = useState("routine"); // routine | table | study | streak
+  const [view, setView] = useState("routine"); // routine | roadmap | study | streak
   const [syncing, setSyncing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [soundOn, setSoundOnState] = useState(SOUND_ON);
@@ -513,15 +524,14 @@ export default function App() {
       if (snap.exists()) {
         const d = snap.data();
         if (d.routineSchedule && Array.isArray(d.routineSchedule)) {
-          const hasOldData = d.routineSchedule.some((t) => t.subject === "CTF" || t.subject === "AI Hackathon" || t.subject === "Academic Revision" || t.allocatedDurationMinutes);
-          if (hasOldData && (!d.version || d.version < 4)) {
+          if (isLegacySchedule(d.routineSchedule)) {
+            // Older default routine (Boot.dev / Skill Gain era): replace with the timetable-based one
             setRoutineSchedule(DEFAULT_ROUTINE_SCHEDULE);
             saveRoutineSchedule(DEFAULT_ROUTINE_SCHEDULE);
-            setDoc(ref, { ...d, version: 4, routineSchedule: DEFAULT_ROUTINE_SCHEDULE }, { merge: true });
+            setDoc(ref, { version: 5, routineSchedule: DEFAULT_ROUTINE_SCHEDULE }, { merge: true });
           } else {
-            const sanitized = d.routineSchedule.map(({ allocatedDurationMinutes, ...rest }) => rest);
-            setRoutineSchedule(sanitized);
-            saveRoutineSchedule(sanitized);
+            setRoutineSchedule(d.routineSchedule);
+            saveRoutineSchedule(d.routineSchedule);
           }
         }
         if (d.allDailyStates) {
@@ -534,17 +544,18 @@ export default function App() {
           setStudyLog(d.studyLog);
           saveStudyLog(d.studyLog);
         }
-        if (d.streakFreeze !== undefined) {
-          setStreakFreeze(d.streakFreeze);
-          saveStreakFreeze(d.streakFreeze);
+        if (d.roadmapProgress && typeof d.roadmapProgress === "object") {
+          setRoadmapProgress(d.roadmapProgress);
+          saveRoadmapProgress(d.roadmapProgress);
         }
         setUsername(d.username || "");
       } else {
         setDoc(ref, {
+          version: 5,
           routineSchedule,
           allDailyStates,
           studyLog,
-          streakFreeze,
+          roadmapProgress,
           username: ""
         });
       }
@@ -565,10 +576,11 @@ export default function App() {
     saveRef.current = setTimeout(async () => {
       try {
         await setDoc(doc(db, "users", user.uid, "data", "weeks"), {
+          version: 5,
           routineSchedule,
           allDailyStates,
           studyLog,
-          streakFreeze,
+          roadmapProgress,
           username
         });
       } catch (e) {
@@ -576,14 +588,13 @@ export default function App() {
       }
       setSyncing(false);
     }, 800);
-  }, [routineSchedule, allDailyStates, studyLog, streakFreeze, username, user]);
+  }, [routineSchedule, allDailyStates, studyLog, roadmapProgress, username, user]);
 
   // Streak Calculation
   const streakMetrics = computeStreakMetrics({
     routineSchedule,
     allDailyStates,
-    studyLog,
-    streakFreezeEnabled: streakFreeze
+    studyLog
   });
 
   // Task & Schedule handlers with strict 00:00 AM Cutoff
@@ -733,9 +744,27 @@ export default function App() {
     SFX.undo();
   }
 
-  function handleToggleFreeze(val) {
-    setStreakFreeze(val);
-    saveStreakFreeze(val);
+  function handleToggleRoadmapItem(itemId) {
+    setRoadmapProgress((prev) => {
+      const next = { ...prev };
+      if (next[itemId]) delete next[itemId];
+      else next[itemId] = true;
+      saveRoadmapProgress(next);
+      return next;
+    });
+  }
+
+  function handleStartRoadmapFocus() {
+    const todayName = DAYS[new Date().getDay()];
+    const roadmapBlock = routineSchedule.find((t) => t.day === todayName && t.subject === ROADMAP_SUBJECT);
+    setSelectedDate(getStorageDateStr());
+    handleStartTimerSession({
+      taskId: roadmapBlock?.id || null,
+      subject: ROADMAP_SUBJECT,
+      targetSeconds: 3600,
+      openFullscreen: true
+    });
+    setView("study");
   }
 
   // Loading state
@@ -765,50 +794,49 @@ export default function App() {
       {/* ── ANIME & CYBERPUNK CUSTOM MOUSE CURSOR (POINTER ONLY) ── */}
       <CustomCursor />
 
-      {/* ── STICKY TOP HEADER ── */}
-      <header className="app-header">
-        <div className="app-header-inner">
-          <div className="brand-section" onClick={() => { SFX.tap(); setView("routine"); }}>
-            <CyberLogo className="header-cyber" />
-            <div className="brand-badge">Focus Engine</div>
-          </div>
+      {/* ── TOP BAR ── */}
+      <header className="hd-bar">
+        <div className="hd-inner">
+          <button className="hd-brand" onClick={() => { SFX.tap(); setView("routine"); }}>
+            <span className="hd-mark" aria-hidden="true" />
+            <span className="hd-word">STUDYSTACK</span>
+          </button>
 
-          <div className="header-right-actions">
+          <nav className="hd-nav" aria-label="Main">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                className={`hd-nav-btn ${view === item.id ? "active" : ""}`}
+                onClick={() => { SFX.tap(); setView(item.id); }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="hd-actions">
             <button
-              className="streak-pill-btn"
+              className={`hd-streak ${streakMetrics.todayProgress?.isMet ? "lit" : ""}`}
               onClick={() => { SFX.click(); setView("streak"); }}
-              title="View Gamified Streak Analytics"
+              title="Days committed in a row"
             >
-              <span className="streak-flame">{streakMetrics.currentStreak > 0 ? "🔥" : "❄️"}</span>
-              <span>{streakMetrics.currentStreak}d</span>
+              <strong>{streakMetrics.currentStreak}</strong>
+              <span>{streakMetrics.currentStreak === 1 ? "day" : "days"}</span>
             </button>
 
-            <span className={`sync-status-pill ${syncing ? "syncing" : ""} ${!isOnline ? "offline" : ""}`}>
-              {!isOnline ? "⚡ Offline" : syncing ? "🔄 Syncing..." : user ? "● Cloud" : "● Local"}
-            </span>
+            <span
+              className={`hd-sync ${syncing ? "syncing" : ""} ${!isOnline ? "offline" : ""}`}
+              title={!isOnline ? "Offline" : syncing ? "Syncing" : user ? "Saved to cloud" : "Saved on this device"}
+            />
 
-            <button
-              className="theme-toggle-btn"
-              onClick={toggleTheme}
-              title={`Switch to ${themeMode === "dark" ? "Light" : "Dark"} Mode`}
-            >
-              {themeMode === "dark" ? "☀️" : "🌙"}
+            <button className="hd-icon" onClick={toggleTheme} title={`Switch to ${themeMode === "dark" ? "light" : "dark"} mode`}>
+              {themeMode === "dark" ? "☀" : "☾"}
             </button>
-
-            <button
-              className="sound-toggle-btn"
-              onClick={toggleSound}
-              title={soundOn ? "Mute sounds" : "Unmute sounds"}
-            >
-              {soundOn ? "🔊" : "🔇"}
+            <button className="hd-icon" onClick={toggleSound} title={soundOn ? "Mute sounds" : "Unmute sounds"}>
+              {soundOn ? "♪" : "–"}
             </button>
-
-            <button
-              className="header-acct-btn"
-              onClick={() => setShowSettings(true)}
-              title="Account Settings"
-            >
-              {user ? (username || "Account") : "Settings"}
+            <button className="hd-icon hd-acct" onClick={() => setShowSettings(true)} title="Account settings">
+              {(username || user?.email || "G").slice(0, 1).toUpperCase()}
             </button>
           </div>
         </div>
@@ -835,53 +863,30 @@ export default function App() {
 
       {/* ── MAIN CONTENT CONTAINER ── */}
       <main className="main-content-wrap">
-        {/* Desktop Segmented Navigation Tabs */}
-        <nav className="desktop-nav-bar">
-          <button
-            className={`desktop-tab-btn ${view === "routine" ? "active" : ""}`}
-            onClick={() => { SFX.tap(); setView("routine"); }}
-          >
-            📋 ROUTINE CHECKLIST
-          </button>
-          <button
-            className={`desktop-tab-btn ${view === "table" ? "active" : ""}`}
-            onClick={() => { SFX.tap(); setView("table"); }}
-          >
-            📅 TIMETABLE
-          </button>
-          <button
-            className={`desktop-tab-btn ${view === "study" ? "active" : ""}`}
-            onClick={() => { SFX.tap(); setView("study"); }}
-          >
-            ⏱️ STUDY TIMER
-          </button>
-          <button
-            className={`desktop-tab-btn ${view === "streak" ? "active" : ""}`}
-            onClick={() => { SFX.tap(); setView("streak"); }}
-          >
-            🔥 STREAK TRACKER
-          </button>
-        </nav>
-
-        {/* Views */}
         {view === "routine" && (
-          <RoutineChecklist
+          <TodayView
             routineSchedule={routineSchedule}
-            dailyStates={allDailyStates[selectedDate] || {}}
+            allDailyStates={allDailyStates}
+            studyLog={studyLog}
             selectedDateStr={selectedDate}
             onSelectDate={setSelectedDate}
             onToggleTaskStatus={handleToggleTaskStatus}
             onStartTaskTimer={handleStartTaskTimer}
             onUpdateSchedule={handleUpdateSchedule}
             onResetSchedule={handleResetSchedule}
+            onOpenRoadmap={() => setView("roadmap")}
+            streakMetrics={streakMetrics}
+            roadmapProgress={roadmapProgress}
             sfx={SFX}
           />
         )}
 
-        {view === "table" && (
-          <RoutineTable
-            routineSchedule={routineSchedule}
-            onStartTaskTimer={handleStartTaskTimer}
+        {view === "roadmap" && (
+          <RoadmapView
+            progress={roadmapProgress}
+            onToggleItem={handleToggleRoadmapItem}
+            onStartFocus={handleStartRoadmapFocus}
+            sfx={SFX}
           />
         )}
 
@@ -901,49 +906,21 @@ export default function App() {
           />
         )}
 
-        {view === "streak" && (
-          <StreakView
-            streakMetrics={streakMetrics}
-            onToggleStreakFreeze={handleToggleFreeze}
-            onBack={() => setView("routine")}
-            sfx={SFX}
-          />
-        )}
+        {view === "streak" && <StreakView streakMetrics={streakMetrics} />}
       </main>
 
-      {/* ── MOBILE BOTTOM NAVIGATION BAR ── */}
-      <nav className="mobile-bottom-nav">
-        <button
-          className={`mobile-nav-item ${view === "routine" ? "active" : ""}`}
-          onClick={() => { SFX.tap(); setView("routine"); }}
-        >
-          <span className="mobile-nav-icon">📋</span>
-          <span className="mobile-nav-label">Checklist</span>
-        </button>
-
-        <button
-          className={`mobile-nav-item ${view === "table" ? "active" : ""}`}
-          onClick={() => { SFX.tap(); setView("table"); }}
-        >
-          <span className="mobile-nav-icon">📅</span>
-          <span className="mobile-nav-label">Timetable</span>
-        </button>
-
-        <button
-          className={`mobile-nav-item ${view === "study" ? "active" : ""}`}
-          onClick={() => { SFX.tap(); setView("study"); }}
-        >
-          <span className="mobile-nav-icon">⏱️</span>
-          <span className="mobile-nav-label">Timer</span>
-        </button>
-
-        <button
-          className={`mobile-nav-item ${view === "streak" ? "active" : ""}`}
-          onClick={() => { SFX.tap(); setView("streak"); }}
-        >
-          <span className="mobile-nav-icon">🔥</span>
-          <span className="mobile-nav-label">Streak</span>
-        </button>
+      {/* ── MOBILE BOTTOM NAVIGATION ── */}
+      <nav className="mb-nav" aria-label="Main">
+        {NAV_ITEMS.map((item) => (
+          <button
+            key={item.id}
+            className={`mb-nav-btn ${view === item.id ? "active" : ""}`}
+            onClick={() => { SFX.tap(); setView(item.id); }}
+          >
+            <span className="mb-nav-glyph" aria-hidden="true">{item.glyph}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
       </nav>
 
       {/* ── SETTINGS MODAL ── */}

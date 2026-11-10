@@ -3,13 +3,14 @@
  * Supports routines, daily task checkpoints, task-bound timer sessions, and streak tracking.
  */
 
-import { DEFAULT_ROUTINE_SCHEDULE } from "../config/routineData";
+import { DEFAULT_ROUTINE_SCHEDULE, isLegacySchedule } from "../config/routineData";
 
-export const STORAGE_VERSION = 4;
+export const STORAGE_VERSION = 5;
 
 const KEYS = {
   VERSION: "sq_storage_version",
-  ROUTINE: "sq_routine_schedule_v4",
+  ROUTINE: "sq_routine_schedule_v5",
+  ROADMAP: "sq_roadmap_progress_v1",
   DAILY_STATES: "sq_daily_task_states_v2",
   ACTIVE_TIMER: "sq_active_timer_session_v2",
   STUDY_LOG: "sq_study_log_v2",
@@ -65,12 +66,11 @@ export function loadRoutineSchedule() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const hasOldData = parsed.some((t) => t.subject === "CTF" || t.subject === "AI Hackathon" || t.subject === "Academic Revision" || t.allocatedDurationMinutes);
-        if (hasOldData) {
+        if (isLegacySchedule(parsed)) {
           localStorage.setItem(KEYS.ROUTINE, JSON.stringify(DEFAULT_ROUTINE_SCHEDULE));
           return DEFAULT_ROUTINE_SCHEDULE;
         }
-        return parsed.map(({ allocatedDurationMinutes, ...rest }) => rest);
+        return parsed;
       }
     }
   } catch (e) {
@@ -266,4 +266,31 @@ export function setGuestMode(isGuest) {
   try {
     localStorage.setItem(KEYS.GUEST_MODE, isGuest ? "true" : "false");
   } catch (e) {}
+}
+
+/**
+ * Load roadmap progress: { [topicId]: true }
+ */
+export function loadRoadmapProgress() {
+  try {
+    const raw = localStorage.getItem(KEYS.ROADMAP);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch (e) {
+    console.error("Failed to load roadmap progress:", e);
+  }
+  return {};
+}
+
+/**
+ * Save roadmap progress
+ */
+export function saveRoadmapProgress(progress) {
+  try {
+    localStorage.setItem(KEYS.ROADMAP, JSON.stringify(progress || {}));
+  } catch (e) {
+    console.error("Failed to save roadmap progress:", e);
+  }
 }
