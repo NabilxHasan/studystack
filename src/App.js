@@ -24,7 +24,8 @@ import {
   DAYS,
   DEFAULT_ROUTINE_SCHEDULE,
   ROADMAP_SUBJECT,
-  isLegacySchedule
+  needsMigration,
+  migrateSchedule
 } from "./config/routineData";
 
 import {
@@ -40,6 +41,10 @@ import {
   recordStudyTime,
   loadRoadmapProgress,
   saveRoadmapProgress,
+  loadDayOverrides,
+  saveDayOverrides,
+  loadGymLog,
+  saveGymLog,
   isGuestMode,
   setGuestMode,
   dateStr as getStorageDateStr
@@ -51,6 +56,8 @@ import TodayView from "./components/TodayView";
 import RoadmapView from "./components/RoadmapView";
 import StudyTimer from "./components/StudyTimer";
 import StreakView from "./components/StreakView";
+import GymView from "./components/GymView";
+import { computeGymStreak } from "./config/gymData";
 import ActiveTimerBanner from "./components/ActiveTimerBanner";
 import CustomCursor from "./components/CustomCursor";
 
@@ -312,6 +319,7 @@ const NAV_ITEMS = [
   { id: "routine", label: "Today", glyph: "◉" },
   { id: "roadmap", label: "Roadmap", glyph: "⌁" },
   { id: "study", label: "Focus", glyph: "◷" },
+  { id: "gym", label: "Gym", glyph: "▣" },
   { id: "streak", label: "Streak", glyph: "▲" }
 ];
 
@@ -348,6 +356,8 @@ export default function App() {
   const [allDailyStates, setAllDailyStates] = useState(() => loadAllDailyStates());
   const [studyLog, setStudyLog] = useState(() => loadStudyLog());
   const [roadmapProgress, setRoadmapProgress] = useState(() => loadRoadmapProgress());
+  const [dayOverrides, setDayOverrides] = useState(() => loadDayOverrides());
+  const [gymLog, setGymLog] = useState(() => loadGymLog());
   const [activeSession, setActiveTimerSession] = useState(() => loadActiveTimerSession());
   const [selectedDate, setSelectedDate] = useState(() => getStorageDateStr());
   const [todayDateStr, setTodayDateStr] = useState(() => getStorageDateStr());
@@ -524,11 +534,12 @@ export default function App() {
       if (snap.exists()) {
         const d = snap.data();
         if (d.routineSchedule && Array.isArray(d.routineSchedule)) {
-          if (isLegacySchedule(d.routineSchedule)) {
-            // Older default routine (Boot.dev / Skill Gain era): replace with the timetable-based one
-            setRoutineSchedule(DEFAULT_ROUTINE_SCHEDULE);
-            saveRoutineSchedule(DEFAULT_ROUTINE_SCHEDULE);
-            setDoc(ref, { version: 5, routineSchedule: DEFAULT_ROUTINE_SCHEDULE }, { merge: true });
+          if (needsMigration(d.routineSchedule)) {
+            // Older default routine: replace with the current default, keeping blocks the user added
+            const migrated = migrateSchedule(d.routineSchedule);
+            setRoutineSchedule(migrated);
+            saveRoutineSchedule(migrated);
+            setDoc(ref, { version: 6, routineSchedule: migrated }, { merge: true });
           } else {
             setRoutineSchedule(d.routineSchedule);
             saveRoutineSchedule(d.routineSchedule);
@@ -544,6 +555,14 @@ export default function App() {
           setStudyLog(d.studyLog);
           saveStudyLog(d.studyLog);
         }
+        if (d.dayOverrides && typeof d.dayOverrides === "object") {
+          setDayOverrides(d.dayOverrides);
+          saveDayOverrides(d.dayOverrides);
+        }
+        if (d.gymLog && typeof d.gymLog === "object") {
+          setGymLog(d.gymLog);
+          saveGymLog(d.gymLog);
+        }
         if (d.roadmapProgress && typeof d.roadmapProgress === "object") {
           setRoadmapProgress(d.roadmapProgress);
           saveRoadmapProgress(d.roadmapProgress);
@@ -551,11 +570,13 @@ export default function App() {
         setUsername(d.username || "");
       } else {
         setDoc(ref, {
-          version: 5,
+          version: 6,
           routineSchedule,
           allDailyStates,
           studyLog,
           roadmapProgress,
+          dayOverrides,
+          gymLog,
           username: ""
         });
       }
@@ -576,11 +597,13 @@ export default function App() {
     saveRef.current = setTimeout(async () => {
       try {
         await setDoc(doc(db, "users", user.uid, "data", "weeks"), {
-          version: 5,
+          version: 6,
           routineSchedule,
           allDailyStates,
           studyLog,
           roadmapProgress,
+          dayOverrides,
+          gymLog,
           username
         });
       } catch (e) {
@@ -588,14 +611,17 @@ export default function App() {
       }
       setSyncing(false);
     }, 800);
-  }, [routineSchedule, allDailyStates, studyLog, roadmapProgress, username, user]);
+  }, [routineSchedule, allDailyStates, studyLog, roadmapProgress, dayOverrides, gymLog, username, user]);
 
   // Streak Calculation
   const streakMetrics = computeStreakMetrics({
     routineSchedule,
     allDailyStates,
-    studyLog
+    studyLog,
+    overrides: dayOverrides
   });
+
+  const gymStreak = computeGymStreak(gymLog, todayDateStr);
 
   // Task & Schedule handlers with strict 00:00 AM Cutoff
   function handleToggleTaskStatus(dayStr, taskId, status) {
@@ -744,6 +770,32 @@ export default function App() {
     SFX.undo();
   }
 
+  function handleSetDayOverride(day, override) {
+    if (day < getStorageDateStr()) return; // past days are locked
+    setDayOverrides((prev) => {
+      const next = { ...prev };
+      if (override && override.subject) next[day] = { subject: override.subject, setAt: Date.now() };
+      else delete next[day];
+      saveDayOverrides(next);
+      return next;
+    });
+  }
+
+  /** Set how many sets of an exercise are done today. Only today can be logged. */
+  function handleSetGymSets(exerciseId, sets) {
+    const today = getStorageDateStr();
+    setGymLog((prev) => {
+      const day = { ...(prev[today] || {}) };
+      if (sets > 0) day[exerciseId] = sets;
+      else delete day[exerciseId];
+      const next = { ...prev };
+      if (Object.keys(day).length) next[today] = day;
+      else delete next[today];
+      saveGymLog(next);
+      return next;
+    });
+  }
+
   function handleToggleRoadmapItem(itemId) {
     setRoadmapProgress((prev) => {
       const next = { ...prev };
@@ -877,6 +929,8 @@ export default function App() {
             onOpenRoadmap={() => setView("roadmap")}
             streakMetrics={streakMetrics}
             roadmapProgress={roadmapProgress}
+            dayOverrides={dayOverrides}
+            onSetDayOverride={handleSetDayOverride}
             sfx={SFX}
           />
         )}
@@ -906,7 +960,11 @@ export default function App() {
           />
         )}
 
-        {view === "streak" && <StreakView streakMetrics={streakMetrics} />}
+        {view === "gym" && (
+          <GymView gymLog={gymLog} gymStreak={gymStreak} onSetSets={handleSetGymSets} sfx={SFX} />
+        )}
+
+        {view === "streak" && <StreakView streakMetrics={streakMetrics} gymStreak={gymStreak} />}
       </main>
 
       {/* ── MOBILE BOTTOM NAVIGATION ── */}

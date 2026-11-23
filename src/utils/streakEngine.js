@@ -2,9 +2,10 @@
  * Streak Engine
  * A day counts as "committed" when at least 70% of that day's blocks are done
  * OR at least 3 hours were logged on the timer.
+ * On an exam prep day (override), one completed session of that subject counts.
  */
 
-import { DAYS } from "../config/routineData";
+import { DAYS, EXAM_SESSIONS_NEEDED, tasksForDate } from "../config/routineData";
 import { dateStr } from "./storage";
 
 export const GOAL_RATE = 0.7;
@@ -15,33 +16,40 @@ export function blocksNeeded(total) {
   return Math.ceil(total * GOAL_RATE - 1e-9);
 }
 
-export function isDayGoalMet(targetDateStr, routineSchedule, allDailyStates, studyLog) {
+export function isDayGoalMet(targetDateStr, routineSchedule, allDailyStates, studyLog, overrides = {}) {
   const [y, m, d] = targetDateStr.split("-").map(Number);
   const dateObj = new Date(y, m - 1, d);
   const dayName = DAYS[dateObj.getDay()];
 
-  const dayTasks = routineSchedule.filter((t) => t.day === dayName);
+  const override = overrides && overrides[targetDateStr];
+  const isExam = !!(override && override.subject);
+  const dayTasks = tasksForDate(targetDateStr, routineSchedule, overrides);
   const taskStates = allDailyStates[targetDateStr] || {};
   const totalTasks = dayTasks.length;
 
   // Count every completed entry saved for that date (capped at the day's block count),
   // so history survives when the routine itself is changed later.
-  const completedEntries = Object.values(taskStates).filter(
-    (s) => s && (s.status === "completed" || s === "completed")
+  // Exam days only count their own exam sessions.
+  const completedEntries = Object.entries(taskStates).filter(
+    ([id, s]) =>
+      s && (s.status === "completed" || s === "completed") && (!isExam || id.startsWith("exam-"))
   ).length;
   const completedTasks = Math.min(totalTasks, completedEntries);
 
   const secondsStudied = studyLog[targetDateStr] || 0;
   const taskCompletionRate = totalTasks > 0 ? completedTasks / totalTasks : 1;
+  const needed = isExam ? EXAM_SESSIONS_NEEDED : blocksNeeded(totalTasks);
 
-  const isMet =
-    (totalTasks > 0 && completedTasks >= blocksNeeded(totalTasks)) || secondsStudied >= GOAL_SECONDS;
+  const isMet = (totalTasks > 0 && completedTasks >= needed) || secondsStudied >= GOAL_SECONDS;
 
   return {
     date: targetDateStr,
     dayName,
     totalTasks,
     completedTasks,
+    needed,
+    isExam,
+    examSubject: isExam ? override.subject : null,
     taskCompletionRate,
     secondsStudied,
     isMet,
@@ -49,10 +57,10 @@ export function isDayGoalMet(targetDateStr, routineSchedule, allDailyStates, stu
   };
 }
 
-export function computeStreakMetrics({ routineSchedule = [], allDailyStates = {}, studyLog = {} }) {
+export function computeStreakMetrics({ routineSchedule = [], allDailyStates = {}, studyLog = {}, overrides = {} }) {
   const today = dateStr();
   const now = new Date();
-  const todayMetrics = isDayGoalMet(today, routineSchedule, allDailyStates, studyLog);
+  const todayMetrics = isDayGoalMet(today, routineSchedule, allDailyStates, studyLog, overrides);
 
   // Current streak: today (if done) + consecutive committed days before it.
   // Today not being done yet does not break the streak; yesterday missing does.
@@ -60,7 +68,7 @@ export function computeStreakMetrics({ routineSchedule = [], allDailyStates = {}
   for (let i = 1; i <= 730; i++) {
     const past = new Date(now);
     past.setDate(now.getDate() - i);
-    const metrics = isDayGoalMet(dateStr(past), routineSchedule, allDailyStates, studyLog);
+    const metrics = isDayGoalMet(dateStr(past), routineSchedule, allDailyStates, studyLog, overrides);
     if (metrics.isMet) currentStreak += 1;
     else if (metrics.isRestDay) continue;
     else break;
@@ -70,7 +78,7 @@ export function computeStreakMetrics({ routineSchedule = [], allDailyStates = {}
   const recordedDates = new Set([...Object.keys(allDailyStates), ...Object.keys(studyLog)]);
   const committedDates = [...recordedDates]
     .filter((ds) => /^\d{4}-\d{2}-\d{2}$/.test(ds))
-    .filter((ds) => isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog).isMet)
+    .filter((ds) => isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog, overrides).isMet)
     .sort();
   const totalDays = committedDates.length;
 
@@ -92,7 +100,7 @@ export function computeStreakMetrics({ routineSchedule = [], allDailyStates = {}
     const d = new Date(now);
     d.setDate(now.getDate() - i);
     const ds = dateStr(d);
-    const m = isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog);
+    const m = isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog, overrides);
     week.push({
       dateStr: ds,
       dayShort: DAYS[d.getDay()].slice(0, 3),

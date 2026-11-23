@@ -3,7 +3,8 @@
  *
  * - UNI_CLASSES: fixed class slots (information only, shown on the Today screen).
  * - DEFAULT_ROUTINE_SCHEDULE: flexible self-study blocks for after class. No durations.
- *   Every day ends with one Cyber Security Roadmap block.
+ *   The Cyber Security Roadmap gets one long block, on Friday.
+ * - Exam prep: a per-date override that replaces that day's blocks with one subject.
  */
 
 export const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -41,6 +42,7 @@ export const SUBJECT_THEMES = {
   "Calculus":           { color: "#fbbf24", short: "CALC" },
   "Physics":            { color: "#a78bfa", short: "PHY" },
   "EEE":                { color: "#f472b6", short: "EEE" },
+  "DLD":                { color: "#fb923c", short: "DLD" },
   [ROADMAP_SUBJECT]:    { color: "#c6f432", short: "SEC" }
 };
 
@@ -97,39 +99,35 @@ export const DEFAULT_ROUTINE_SCHEDULE = [
   // SUNDAY — OOP theory + lab in class
   block("Sunday", 1, "OOP", "Rewrite today's lecture + finish the lab task", "review"),
   block("Sunday", 2, "Calculus", "Get ahead before Monday's class", "review"),
-  roadmapBlock("Sunday", "Evening slot, after the academic blocks"),
+  block("Sunday", 3, "DLD", "Backlog: one topic + its problems", "backlog"),
 
   // MONDAY — DataCom, Microprocessor, Calculus in class
   block("Monday", 1, "Data Communication", "Revise today's lecture", "review"),
   block("Monday", 2, "Microprocessor", "Revise today's lecture, prep for Tuesday's lab", "review"),
-  roadmapBlock("Monday", "Evening slot, after the academic blocks"),
 
   // TUESDAY — only the Microprocessor lab, lightest uni day
   block("Tuesday", 1, "Microprocessor", "Write up the lab while it is fresh", "review"),
   block("Tuesday", 2, "DSA", "Problem solving before Wednesday's class", "practice"),
   block("Tuesday", 3, "Physics", "Backlog: clear one chapter section", "backlog"),
-  roadmapBlock("Tuesday", "Free afternoon or evening, longest weekday slot"),
 
   // WEDNESDAY — DataCom, Microprocessor, DSA in class
   block("Wednesday", 1, "Data Communication", "Revise today's lecture", "review"),
   block("Wednesday", 2, "DSA", "Revise today's lecture, prep for Thursday's lab", "review"),
-  roadmapBlock("Wednesday", "Evening slot, after the academic blocks"),
 
   // THURSDAY — 9:00 to 4:00 in class, keep the evening short
   block("Thursday", 1, "OOP", "Revise today's lecture", "review"),
   block("Thursday", 2, "Calculus", "Revise today's lecture, solve the exercise set", "review"),
-  roadmapBlock("Thursday", "Short night slot, one topic is enough"),
 
   // FRIDAY — no classes
   block("Friday", 1, "Physics", "Backlog: theory + problem set", "backlog"),
   block("Friday", 2, "EEE", "Backlog: circuits + problem set", "backlog"),
   block("Friday", 3, "DSA", "Problem solving", "practice"),
-  roadmapBlock("Friday", "Long slot, go deep"),
+  roadmapBlock("Friday", "Your one roadmap day: long slot, go deep"),
 
   // SATURDAY — no classes
   block("Saturday", 1, "EEE", "Backlog: theory + problem set", "backlog"),
   block("Saturday", 2, "Calculus", "Problem sets, close the week's gaps", "practice"),
-  roadmapBlock("Saturday", "Long slot, go deep")
+  block("Saturday", 3, "DLD", "Backlog: theory + problem set", "backlog")
 ];
 
 /** Ids/subjects that only existed in older default schedules. Used to migrate saved data. */
@@ -142,4 +140,57 @@ export function isLegacySchedule(schedule) {
       ["Boot.dev", "Skill Gain", "CTF", "AI Hackathon", "Academic Revision"].includes(t.subject) ||
       t.allocatedDurationMinutes
   );
+}
+
+/** Older default routine shapes that should be replaced by the current default. */
+export function needsMigration(schedule) {
+  if (isLegacySchedule(schedule)) return true;
+  // v5 default had a roadmap block every day; it now lives on Friday only
+  return schedule.some((t) => /^(sun|mon|tue|wed|thu|sat)-roadmap$/.test(t.id || ""));
+}
+
+/** Current default routine plus any blocks the user added themselves. */
+export function migrateSchedule(schedule) {
+  const custom = Array.isArray(schedule)
+    ? schedule.filter((t) => t && String(t.id || "").startsWith("custom-"))
+    : [];
+  return [...DEFAULT_ROUTINE_SCHEDULE, ...custom];
+}
+
+/** Subjects offered in exam prep mode. */
+export const EXAM_SUBJECTS = [
+  "DSA",
+  "OOP",
+  "Microprocessor",
+  "Data Communication",
+  "Calculus",
+  "Physics",
+  "EEE",
+  "DLD"
+];
+
+/** One completed exam-prep session counts the day. */
+export const EXAM_SESSIONS_NEEDED = 1;
+
+export function examTasksForDate(date, subject) {
+  return [
+    { n: 1, notes: "Concepts and notes: go through the whole syllabus once" },
+    { n: 2, notes: "Practice problems: work every type that can come" },
+    { n: 3, notes: "Past questions, then final revision of weak spots" }
+  ].map(({ n, notes }) => ({
+    id: `exam-${date}-${n}`,
+    day: null,
+    subject,
+    notes,
+    kind: "exam"
+  }));
+}
+
+/** Blocks for a calendar date: the exam override if one is set, otherwise the weekday routine. */
+export function tasksForDate(date, schedule = [], overrides = {}) {
+  const ov = overrides && overrides[date];
+  if (ov && ov.subject) return examTasksForDate(date, ov.subject);
+  const [y, m, d] = date.split("-").map(Number);
+  const dayName = DAYS[new Date(y, m - 1, d).getDay()];
+  return schedule.filter((t) => t.day === dayName);
 }

@@ -3,7 +3,7 @@
  * Supports routines, daily task checkpoints, task-bound timer sessions, and streak tracking.
  */
 
-import { DEFAULT_ROUTINE_SCHEDULE, isLegacySchedule } from "../config/routineData";
+import { DEFAULT_ROUTINE_SCHEDULE, needsMigration, migrateSchedule } from "../config/routineData";
 
 export const STORAGE_VERSION = 5;
 
@@ -11,6 +11,8 @@ const KEYS = {
   VERSION: "sq_storage_version",
   ROUTINE: "sq_routine_schedule_v5",
   ROADMAP: "sq_roadmap_progress_v1",
+  OVERRIDES: "sq_day_overrides_v1",
+  GYM: "sq_gym_log_v1",
   DAILY_STATES: "sq_daily_task_states_v2",
   ACTIVE_TIMER: "sq_active_timer_session_v2",
   STUDY_LOG: "sq_study_log_v2",
@@ -66,9 +68,10 @@ export function loadRoutineSchedule() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        if (isLegacySchedule(parsed)) {
-          localStorage.setItem(KEYS.ROUTINE, JSON.stringify(DEFAULT_ROUTINE_SCHEDULE));
-          return DEFAULT_ROUTINE_SCHEDULE;
+        if (needsMigration(parsed)) {
+          const migrated = migrateSchedule(parsed);
+          localStorage.setItem(KEYS.ROUTINE, JSON.stringify(migrated));
+          return migrated;
         }
         return parsed;
       }
@@ -292,5 +295,56 @@ export function saveRoadmapProgress(progress) {
     localStorage.setItem(KEYS.ROADMAP, JSON.stringify(progress || {}));
   } catch (e) {
     console.error("Failed to save roadmap progress:", e);
+  }
+}
+
+/**
+ * Load exam-prep day overrides: { [dateStr]: { subject } }
+ */
+export function loadDayOverrides() {
+  try {
+    const raw = localStorage.getItem(KEYS.OVERRIDES);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch (e) {
+    console.error("Failed to load day overrides:", e);
+  }
+  return {};
+}
+
+/**
+ * Save exam-prep day overrides
+ */
+export function saveDayOverrides(overrides) {
+  try {
+    localStorage.setItem(KEYS.OVERRIDES, JSON.stringify(overrides || {}));
+  } catch (e) {
+    console.error("Failed to save day overrides:", e);
+  }
+}
+
+/**
+ * Load gym log: { [dateStr]: { [exerciseId]: setsDone } }
+ */
+export function loadGymLog() {
+  try {
+    const raw = localStorage.getItem(KEYS.GYM);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch (e) {
+    console.error("Failed to load gym log:", e);
+  }
+  return {};
+}
+
+export function saveGymLog(log) {
+  try {
+    localStorage.setItem(KEYS.GYM, JSON.stringify(log || {}));
+  } catch (e) {
+    console.error("Failed to save gym log:", e);
   }
 }

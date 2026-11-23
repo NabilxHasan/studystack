@@ -1,7 +1,7 @@
 import React from "react";
 
 /** Bare-bones streak: how many days in a row you have been committed. Nothing else. */
-export default function StreakView({ streakMetrics }) {
+export default function StreakView({ streakMetrics, gymStreak }) {
   const { currentStreak = 0, longestStreak = 0, totalDays = 0, todayProgress, week = [] } = streakMetrics || {};
   const todayDone = !!todayProgress?.isMet;
 
@@ -31,6 +31,13 @@ export default function StreakView({ streakMetrics }) {
           Total days <strong>{totalDays}</strong>
         </span>
       </div>
+
+      {gymStreak && (
+        <div className="sk-gym" title="Separate streak: Sunday, Tuesday, Thursday">
+          Gym <strong>{gymStreak.current}</strong>{" "}
+          {gymStreak.current === 1 ? "session" : "sessions"} in a row
+        </div>
+      )}
     </div>
   );
 }

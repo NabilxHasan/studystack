@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { DAYS, DAY_METADATA, SUBJECT_THEMES, UNI_CLASSES, ROADMAP_SUBJECT } from "../config/routineData";
+import {
+  DAYS,
+  DAY_METADATA,
+  SUBJECT_THEMES,
+  UNI_CLASSES,
+  ROADMAP_SUBJECT,
+  EXAM_SUBJECTS,
+  tasksForDate
+} from "../config/routineData";
 import { roadmapStats } from "../config/roadmapData";
 import { dateStr } from "../utils/storage";
-import { blocksNeeded, isDayGoalMet } from "../utils/streakEngine";
+import { isDayGoalMet } from "../utils/streakEngine";
 
 const KIND_LABEL = {
   review: "Class review",
   practice: "Practice",
   backlog: "Backlog",
   roadmap: "Roadmap",
+  exam: "Exam prep",
   custom: "Custom"
 };
 
@@ -62,11 +71,14 @@ export default function TodayView({
   onOpenRoadmap,
   streakMetrics,
   roadmapProgress = {},
+  dayOverrides = {},
+  onSetDayOverride,
   sfx
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [newSubject, setNewSubject] = useState("");
   const [newNotes, setNewNotes] = useState("");
+  const [showExamPicker, setShowExamPicker] = useState(false);
   const [left, setLeft] = useState(() => timeLeftToday());
 
   useEffect(() => {
@@ -81,23 +93,32 @@ export default function TodayView({
   const isPastDay = selectedDateStr < todayStr;
 
   const dailyStates = allDailyStates[selectedDateStr] || {};
-  const dayTasks = routineSchedule.filter((t) => t.day === selectedDayName);
+  const dayTasks = tasksForDate(selectedDateStr, routineSchedule, dayOverrides);
   const total = dayTasks.length;
   const isDone = (t) => dailyStates[t.id]?.status === "completed";
   const completed = dayTasks.filter(isDone).length;
-  const need = Math.max(0, blocksNeeded(total) - completed);
-  const dayMetrics = isDayGoalMet(selectedDateStr, routineSchedule, allDailyStates, studyLog);
+  const dayMetrics = isDayGoalMet(selectedDateStr, routineSchedule, allDailyStates, studyLog, dayOverrides);
+  const need = Math.max(0, dayMetrics.needed - completed);
   const met = dayMetrics.isMet;
+  const isExam = dayMetrics.isExam;
+  const examSubject = dayMetrics.examSubject;
   const nextTask = dayTasks.find((t) => !isDone(t));
 
   const streak = streakMetrics?.currentStreak || 0;
   const roadmap = roadmapStats(roadmapProgress);
   const classes = UNI_CLASSES[selectedDayName] || [];
-  const meta = DAY_METADATA[selectedDayName] || { tag: "" };
+  const meta = isExam ? { tag: "EXAM PREP" } : DAY_METADATA[selectedDayName] || { tag: "" };
 
   let headline;
   let sub;
-  if (!isToday) {
+  if (isExam && !isPastDay && !met) {
+    headline = `Exam prep: ${examSubject}.`;
+    sub = isToday
+      ? streak > 0
+        ? `Everything else is paused. One ${examSubject} session before midnight keeps your ${streak}-day streak.`
+        : `Everything else is paused. One ${examSubject} session before midnight and today counts.`
+      : `Planned. This whole day goes to ${examSubject}.`;
+  } else if (!isToday) {
     headline = selectedDayName;
     sub = isPastDay
       ? met
@@ -113,6 +134,14 @@ export default function TodayView({
   } else {
     headline = "Day 1 starts with one block.";
     sub = `${need} ${need === 1 ? "block" : "blocks"} before midnight and today counts.`;
+  }
+
+  function setExam(subject) {
+    if (isPastDay) return;
+    if (subject) sfx?.start?.();
+    else sfx?.undo?.();
+    onSetDayOverride?.(selectedDateStr, subject ? { subject } : null);
+    setShowExamPicker(false);
   }
 
   function toggle(task) {
@@ -189,7 +218,7 @@ export default function TodayView({
           const target = new Date(now);
           target.setDate(now.getDate() + (idx - now.getDay()));
           const ds = dateStr(target);
-          const dm = isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog);
+          const dm = isDayGoalMet(ds, routineSchedule, allDailyStates, studyLog, dayOverrides);
           const state = dm.isMet ? "done" : ds < todayStr ? "missed" : ds === todayStr ? "today" : "future";
           return (
             <button
@@ -240,12 +269,57 @@ export default function TodayView({
         <div className="td-section-head">
           <h2>Study blocks</h2>
           <span>
-            {completed}/{total} done · {blocksNeeded(total)} to count the day
+            {completed}/{total} done · {dayMetrics.needed} to count the day
           </span>
         </div>
 
         {isPastDay && (
           <div className="td-locked">Locked at midnight. Past days are a record, not a to-do list.</div>
+        )}
+
+        {isExam ? (
+          <div className="td-exam-on">
+            <div>
+              <strong>Exam prep: {examSubject}</strong>
+              <span>
+                The normal routine is paused for this day. One session counts the day; do all three before the exam.
+              </span>
+            </div>
+            {!isPastDay && (
+              <button className="td-ghost" onClick={() => setExam(null)}>
+                Turn off
+              </button>
+            )}
+          </div>
+        ) : (
+          !isPastDay &&
+          (showExamPicker ? (
+            <div className="td-exam-pick">
+              <div className="td-exam-pick-head">
+                <span>Which exam? This day becomes all-day prep for it.</span>
+                <button className="td-ghost" onClick={() => setShowExamPicker(false)}>
+                  Cancel
+                </button>
+              </div>
+              <div className="td-exam-chips">
+                {EXAM_SUBJECTS.map((subj) => (
+                  <button
+                    key={subj}
+                    className="td-exam-chip"
+                    style={{ "--block-color": (SUBJECT_THEMES[subj] || {}).color }}
+                    onClick={() => setExam(subj)}
+                  >
+                    {subj}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <button className="td-exam-toggle" onClick={() => setShowExamPicker(true)}>
+              <span className="td-exam-icon" aria-hidden="true">!</span>
+              Exam {isToday ? "tomorrow" : "the next day"}? Switch this day to exam prep
+            </button>
+          ))
         )}
 
         <div className="td-blocks">
@@ -257,6 +331,7 @@ export default function TodayView({
               <div
                 key={task.id}
                 className={`td-block ${done ? "done" : ""} ${isPastDay ? "locked" : ""} ${isRoadmap ? "roadmap" : ""}`}
+                data-kind={task.kind}
                 style={{ "--block-color": theme.color }}
               >
                 <button
@@ -313,7 +388,7 @@ export default function TodayView({
           })}
         </div>
 
-        {!isPastDay && (
+        {!isPastDay && !isExam && (
           <div className="td-foot">
             {isAdding ? (
               <div className="td-add-form">

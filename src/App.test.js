@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { DAYS, DEFAULT_ROUTINE_SCHEDULE, ROADMAP_SUBJECT, UNI_CLASSES, COURSES, isLegacySchedule } from './config/routineData';
+import { DAYS, DEFAULT_ROUTINE_SCHEDULE, ROADMAP_SUBJECT, UNI_CLASSES, COURSES, isLegacySchedule, needsMigration, migrateSchedule, tasksForDate } from './config/routineData';
 import { ROADMAP, ROADMAP_ITEMS, roadmapStats } from './config/roadmapData';
 import {
   saveRoutineSchedule,
@@ -12,32 +12,49 @@ import {
   clearActiveTimerSession,
   saveRoadmapProgress,
   loadRoadmapProgress,
+  saveDayOverrides,
+  loadDayOverrides,
   dateStr
 } from './utils/storage';
 import { isDayGoalMet, computeStreakMetrics } from './utils/streakEngine';
 import App from './App';
+import { GYM_ROUTINE, GYM_DAYS, isGymDay, gymDayStatus, computeGymStreak, nextGymDate } from './config/gymData';
 
 describe('StudyStack Routine Configuration', () => {
-  test('every day has study blocks and ends with exactly one roadmap block', () => {
+  test('every day has study blocks and the roadmap lives on Friday only', () => {
     expect(DAYS).toHaveLength(7);
     DAYS.forEach((day) => {
       const dayTasks = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day);
-      expect(dayTasks.length).toBeGreaterThanOrEqual(3);
-      expect(dayTasks.filter(t => t.subject === ROADMAP_SUBJECT)).toHaveLength(1);
-      expect(dayTasks[dayTasks.length - 1].subject).toBe(ROADMAP_SUBJECT);
+      expect(dayTasks.length).toBeGreaterThanOrEqual(2);
     });
+    const roadmapDays = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.subject === ROADMAP_SUBJECT).map(t => t.day);
+    expect(roadmapDays).toEqual(["Friday"]);
     const ids = DEFAULT_ROUTINE_SCHEDULE.map(t => t.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   test('covers all current courses and both backlogs, with no dropped skills', () => {
     const subjects = new Set(DEFAULT_ROUTINE_SCHEDULE.map(t => t.subject));
-    ["OOP", "Data Communication", "Microprocessor", "DSA", "Calculus", "Physics", "EEE"].forEach((s) => {
+    ["OOP", "Data Communication", "Microprocessor", "DSA", "Calculus", "Physics", "EEE", "DLD"].forEach((s) => {
       expect(DEFAULT_ROUTINE_SCHEDULE.filter(t => t.subject === s).length).toBeGreaterThanOrEqual(2);
     });
     ["Boot.dev", "Skill Gain", "Academic Revision"].forEach((s) => expect(subjects.has(s)).toBe(false));
     expect(isLegacySchedule(DEFAULT_ROUTINE_SCHEDULE)).toBe(false);
     expect(isLegacySchedule([{ id: "mon-block-3", day: "Monday", subject: "Boot.dev" }])).toBe(true);
+    // DLD is a backlog, same as Physics and EEE
+    DEFAULT_ROUTINE_SCHEDULE.filter(t => ["Physics", "EEE", "DLD"].includes(t.subject))
+      .forEach(t => expect(t.kind).toBe("backlog"));
+  });
+
+  test('old routines migrate to the current default and keep custom blocks', () => {
+    const custom = { id: "custom-1", day: "Monday", subject: "Gym", kind: "custom" };
+    const v5 = [{ id: "sun-roadmap", day: "Sunday", subject: ROADMAP_SUBJECT }, custom];
+    expect(needsMigration(v5)).toBe(true);
+    expect(needsMigration(DEFAULT_ROUTINE_SCHEDULE)).toBe(false);
+    expect(needsMigration([...DEFAULT_ROUTINE_SCHEDULE, custom])).toBe(false);
+    const migrated = migrateSchedule(v5);
+    expect(migrated).toHaveLength(DEFAULT_ROUTINE_SCHEDULE.length + 1);
+    expect(migrated.find(t => t.id === "custom-1")).toEqual(custom);
   });
 
   test('university timetable matches the class routine', () => {
@@ -169,6 +186,77 @@ describe('StudyStack Streak Engine', () => {
     expect(metrics.currentStreak).toBe(2);
     expect(metrics.totalDays).toBe(2);
     expect(metrics.week).toHaveLength(7);
+  });
+});
+
+describe('Exam prep override', () => {
+  test('replaces the day with one subject and one session counts the day', () => {
+    const today = dateStr();
+    const overrides = { [today]: { subject: "DSA" } };
+    const tasks = tasksForDate(today, DEFAULT_ROUTINE_SCHEDULE, overrides);
+    expect(tasks).toHaveLength(3);
+    tasks.forEach(t => expect(t.subject).toBe("DSA"));
+
+    const notYet = isDayGoalMet(today, DEFAULT_ROUTINE_SCHEDULE, {}, {}, overrides);
+    expect(notYet.isExam).toBe(true);
+    expect(notYet.isMet).toBe(false);
+
+    const states = { [today]: { [tasks[0].id]: { status: "completed" } } };
+    const done = isDayGoalMet(today, DEFAULT_ROUTINE_SCHEDULE, states, {}, overrides);
+    expect(done.isMet).toBe(true);
+    expect(computeStreakMetrics({ routineSchedule: DEFAULT_ROUTINE_SCHEDULE, allDailyStates: states, studyLog: {}, overrides }).currentStreak).toBeGreaterThanOrEqual(1);
+  });
+
+  test('normal blocks done on an exam day do not count for it', () => {
+    const today = dateStr();
+    const dayName = DAYS[new Date().getDay()];
+    const normal = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === dayName);
+    const states = { [today]: Object.fromEntries(normal.map(t => [t.id, { status: "completed" }])) };
+    const r = isDayGoalMet(today, DEFAULT_ROUTINE_SCHEDULE, states, {}, { [today]: { subject: "Calculus" } });
+    expect(r.isMet).toBe(false);
+  });
+
+  test('overrides persist', () => {
+    localStorage.clear();
+    saveDayOverrides({ "2026-11-25": { subject: "EEE" } });
+    expect(loadDayOverrides()).toEqual({ "2026-11-25": { subject: "EEE" } });
+  });
+});
+
+describe('Gym streak', () => {
+  const full = Object.fromEntries(GYM_ROUTINE.map(ex => [ex.id, ex.sets]));
+  // 2026-11-22 Sun, 11-24 Tue, 11-26 Thu
+  test('routine matches the plan and runs Sun/Tue/Thu', () => {
+    expect(GYM_DAYS).toEqual(["Sunday", "Tuesday", "Thursday"]);
+    expect(GYM_ROUTINE.map(e => `${e.id}:${e.sets}x${e.reps}`)).toEqual([
+      "pushup:3x10", "lat-pulldown:3x10", "overhead-extension:3x15", "ez-bar-curl:3x15",
+      "bodyweight-squat:3x12", "wrist-curl:2x15", "cardio:1x10–15 min"
+    ]);
+    GYM_ROUTINE.forEach(e => expect(e.gif).toMatch(/\/gym\/[a-z-]+\.gif$/));
+    expect(isGymDay("2026-11-24")).toBe(true);
+    expect(isGymDay("2026-11-25")).toBe(false);
+    expect(nextGymDate("2026-11-24")).toBe("2026-11-26");
+    expect(nextGymDate("2026-11-26")).toBe("2026-11-29");
+  });
+
+  test('a session counts at 70% of exercises fully done', () => {
+    const partial = { pushup: 3, "lat-pulldown": 3, "overhead-extension": 3, "ez-bar-curl": 3 };
+    expect(gymDayStatus("2026-11-24", { "2026-11-24": partial }).isMet).toBe(false);
+    expect(gymDayStatus("2026-11-24", { "2026-11-24": { ...partial, cardio: 1 } }).isMet).toBe(true);
+    expect(gymDayStatus("2026-11-24", { "2026-11-24": { ...partial, cardio: 1, pushup: 2 } }).isMet).toBe(false);
+  });
+
+  test('skips non-gym days, breaks on a missed gym day', () => {
+    const log = { "2026-11-17": full, "2026-11-19": full, "2026-11-22": full, "2026-11-24": full };
+    expect(computeGymStreak(log, "2026-11-24").current).toBe(4);
+    expect(computeGymStreak(log, "2026-11-25").current).toBe(4); // Wednesday rest day
+    expect(computeGymStreak(log, "2026-11-26").current).toBe(4); // Thursday, not done yet
+    expect(computeGymStreak(log, "2026-11-27").current).toBe(0); // Thursday missed
+    const gap = { "2026-11-17": full, "2026-11-22": full, "2026-11-24": full };
+    const r = computeGymStreak(gap, "2026-11-24");
+    expect(r.current).toBe(2);
+    expect(r.total).toBe(3);
+    expect(r.recent).toHaveLength(6);
   });
 });
 
