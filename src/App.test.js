@@ -223,6 +223,32 @@ describe('Exam prep override', () => {
   });
 });
 
+describe('Gym and physio blocks', () => {
+  test('gym reminder on Sun/Tue/Thu, physio on every other day', () => {
+    DAYS.forEach((day) => {
+      const kinds = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === day).map(t => t.kind);
+      const gymDay = ["Sunday", "Tuesday", "Thursday"].includes(day);
+      expect(kinds.includes("gym")).toBe(gymDay);
+      expect(kinds.includes("physio")).toBe(!gymDay);
+    });
+  });
+
+  test('gym reminder does not count toward the study streak', () => {
+    const tue = "2026-11-24";
+    const study = DEFAULT_ROUTINE_SCHEDULE.filter(t => t.day === "Tuesday" && t.kind !== "gym");
+    const r = isDayGoalMet(tue, DEFAULT_ROUTINE_SCHEDULE, {}, {});
+    expect(r.totalTasks).toBe(study.length);
+    const onlyGym = isDayGoalMet(tue, DEFAULT_ROUTINE_SCHEDULE, { [tue]: { "tue-gym": { status: "completed" } } }, {});
+    expect(onlyGym.completedTasks).toBe(0);
+  });
+
+  test('routines saved before gym/physio existed migrate', () => {
+    const old = DEFAULT_ROUTINE_SCHEDULE.filter(t => !["gym", "physio"].includes(t.kind));
+    expect(needsMigration(old)).toBe(true);
+    expect(migrateSchedule(old)).toHaveLength(DEFAULT_ROUTINE_SCHEDULE.length);
+  });
+});
+
 describe('Gym streak', () => {
   const full = Object.fromEntries(GYM_ROUTINE.map(ex => [ex.id, ex.sets]));
   // 2026-11-22 Sun, 11-24 Tue, 11-26 Thu

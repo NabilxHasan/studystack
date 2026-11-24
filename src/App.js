@@ -927,6 +927,8 @@ export default function App() {
             onUpdateSchedule={handleUpdateSchedule}
             onResetSchedule={handleResetSchedule}
             onOpenRoadmap={() => setView("roadmap")}
+            onOpenGym={() => setView("gym")}
+            gymLog={gymLog}
             streakMetrics={streakMetrics}
             roadmapProgress={roadmapProgress}
             dayOverrides={dayOverrides}

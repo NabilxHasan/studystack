@@ -6,11 +6,13 @@ import {
   UNI_CLASSES,
   ROADMAP_SUBJECT,
   EXAM_SUBJECTS,
-  tasksForDate
+  tasksForDate,
+  isStudyBlock
 } from "../config/routineData";
 import { roadmapStats } from "../config/roadmapData";
 import { dateStr } from "../utils/storage";
 import { isDayGoalMet } from "../utils/streakEngine";
+import { gymDayStatus } from "../config/gymData";
 
 const KIND_LABEL = {
   review: "Class review",
@@ -18,6 +20,8 @@ const KIND_LABEL = {
   backlog: "Backlog",
   roadmap: "Roadmap",
   exam: "Exam prep",
+  physio: "Physio",
+  gym: "Gym day",
   custom: "Custom"
 };
 
@@ -69,6 +73,8 @@ export default function TodayView({
   onUpdateSchedule,
   onResetSchedule,
   onOpenRoadmap,
+  onOpenGym,
+  gymLog = {},
   streakMetrics,
   roadmapProgress = {},
   dayOverrides = {},
@@ -94,15 +100,17 @@ export default function TodayView({
 
   const dailyStates = allDailyStates[selectedDateStr] || {};
   const dayTasks = tasksForDate(selectedDateStr, routineSchedule, dayOverrides);
-  const total = dayTasks.length;
-  const isDone = (t) => dailyStates[t.id]?.status === "completed";
-  const completed = dayTasks.filter(isDone).length;
+  const studyTasks = dayTasks.filter(isStudyBlock);
+  const total = studyTasks.length;
+  const gymDone = gymDayStatus(selectedDateStr, gymLog).isMet;
+  const isDone = (t) => (t.kind === "gym" ? gymDone : dailyStates[t.id]?.status === "completed");
+  const completed = studyTasks.filter(isDone).length;
   const dayMetrics = isDayGoalMet(selectedDateStr, routineSchedule, allDailyStates, studyLog, dayOverrides);
   const need = Math.max(0, dayMetrics.needed - completed);
   const met = dayMetrics.isMet;
   const isExam = dayMetrics.isExam;
   const examSubject = dayMetrics.examSubject;
-  const nextTask = dayTasks.find((t) => !isDone(t));
+  const nextTask = studyTasks.find((t) => !isDone(t));
 
   const streak = streakMetrics?.currentStreak || 0;
   const roadmap = roadmapStats(roadmapProgress);
@@ -145,6 +153,11 @@ export default function TodayView({
   }
 
   function toggle(task) {
+    if (task.kind === "gym") {
+      sfx?.tap?.();
+      onOpenGym?.();
+      return;
+    }
     if (isPastDay) return;
     const next = isDone(task) ? "pending" : "completed";
     if (next === "completed") sfx?.done?.();
@@ -327,6 +340,7 @@ export default function TodayView({
             const done = isDone(task);
             const theme = SUBJECT_THEMES[task.subject] || { color: "var(--text-subtle)" };
             const isRoadmap = task.subject === ROADMAP_SUBJECT;
+            const isGym = task.kind === "gym";
             return (
               <div
                 key={task.id}
@@ -336,10 +350,11 @@ export default function TodayView({
               >
                 <button
                   className="td-check"
-                  disabled={isPastDay}
+                  disabled={isPastDay && !isGym}
                   onClick={() => toggle(task)}
                   aria-pressed={done}
-                  aria-label={`${done ? "Unmark" : "Mark"} ${task.subject} as done`}
+                  aria-label={isGym ? "Open the Gym page" : `${done ? "Unmark" : "Mark"} ${task.subject} as done`}
+                  title={isGym ? "Ticks itself when the gym session counts" : undefined}
                 >
                   {done ? "✓" : ""}
                 </button>
@@ -350,7 +365,13 @@ export default function TodayView({
                     <span className="td-kind">{KIND_LABEL[task.kind] || "Study"}</span>
                   </div>
                   <div className="td-block-notes">
-                    {isRoadmap && roadmap.next ? (
+                    {isGym ? (
+                      done ? (
+                        "Session counted on the Gym page."
+                      ) : (
+                        task.notes
+                      )
+                    ) : isRoadmap && roadmap.next ? (
                       <>
                         Next: <strong>{roadmap.next.label}</strong> · {roadmap.percent}% of roadmap done
                       </>
@@ -366,7 +387,12 @@ export default function TodayView({
                       Open
                     </button>
                   )}
-                  {!isPastDay && !done && (
+                  {isGym && (
+                    <button className="td-ghost" onClick={() => onOpenGym?.()}>
+                      Open
+                    </button>
+                  )}
+                  {!isPastDay && !done && !isGym && (
                     <button
                       className="td-focus"
                       onClick={() => {

@@ -5,7 +5,7 @@
  * On an exam prep day (override), one completed session of that subject counts.
  */
 
-import { DAYS, EXAM_SESSIONS_NEEDED, tasksForDate } from "../config/routineData";
+import { DAYS, EXAM_SESSIONS_NEEDED, tasksForDate, isStudyBlock } from "../config/routineData";
 import { dateStr } from "./storage";
 
 export const GOAL_RATE = 0.7;
@@ -23,7 +23,8 @@ export function isDayGoalMet(targetDateStr, routineSchedule, allDailyStates, stu
 
   const override = overrides && overrides[targetDateStr];
   const isExam = !!(override && override.subject);
-  const dayTasks = tasksForDate(targetDateStr, routineSchedule, overrides);
+  // The gym reminder is not a study block; gym has its own streak.
+  const dayTasks = tasksForDate(targetDateStr, routineSchedule, overrides).filter(isStudyBlock);
   const taskStates = allDailyStates[targetDateStr] || {};
   const totalTasks = dayTasks.length;
 
@@ -32,7 +33,10 @@ export function isDayGoalMet(targetDateStr, routineSchedule, allDailyStates, stu
   // Exam days only count their own exam sessions.
   const completedEntries = Object.entries(taskStates).filter(
     ([id, s]) =>
-      s && (s.status === "completed" || s === "completed") && (!isExam || id.startsWith("exam-"))
+      s &&
+      (s.status === "completed" || s === "completed") &&
+      !id.endsWith("-gym") &&
+      (!isExam || id.startsWith("exam-"))
   ).length;
   const completedTasks = Math.min(totalTasks, completedEntries);
 

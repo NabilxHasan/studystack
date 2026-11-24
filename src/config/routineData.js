@@ -43,6 +43,8 @@ export const SUBJECT_THEMES = {
   "Physics":            { color: "#a78bfa", short: "PHY" },
   "EEE":                { color: "#f472b6", short: "EEE" },
   "DLD":                { color: "#fb923c", short: "DLD" },
+  "Physio practice":    { color: "#2dd4bf", short: "PHYSIO" },
+  "Gym":                { color: "#e5e7eb", short: "GYM" },
   [ROADMAP_SUBJECT]:    { color: "#c6f432", short: "SEC" }
 };
 
@@ -79,6 +81,24 @@ export const UNI_CLASSES = {
 function block(day, n, subject, notes, kind) {
   return { id: `${day.slice(0, 3).toLowerCase()}-s${n}`, day, subject, notes, kind };
 }
+function gymBlock(day) {
+  return {
+    id: `${day.slice(0, 3).toLowerCase()}-gym`,
+    day,
+    subject: "Gym",
+    notes: "Push-ups, pulldown, arms, squats, cardio. Log your sets on the Gym page.",
+    kind: "gym"
+  };
+}
+function physioBlock(day) {
+  return {
+    id: `${day.slice(0, 3).toLowerCase()}-physio`,
+    day,
+    subject: "Physio practice",
+    notes: "Your physio exercises. Non-gym day, so don't skip it.",
+    kind: "physio"
+  };
+}
 function roadmapBlock(day, notes) {
   return {
     id: `${day.slice(0, 3).toLowerCase()}-roadmap`,
@@ -94,41 +114,56 @@ function roadmapBlock(day, notes) {
  *       "practice"→ problem solving
  *       "backlog" → backlog course (Physics, EEE)
  *       "roadmap" → cyber security roadmap slot
+ *       "physio"  → physio practice, on non-gym days (counts like a study block)
+ *       "gym"     → reminder on gym days (Sun/Tue/Thu); ticks itself from the Gym page,
+ *                   does not count toward the study streak (gym has its own streak)
  */
 export const DEFAULT_ROUTINE_SCHEDULE = [
   // SUNDAY — OOP theory + lab in class
   block("Sunday", 1, "OOP", "Rewrite today's lecture + finish the lab task", "review"),
   block("Sunday", 2, "Calculus", "Get ahead before Monday's class", "review"),
   block("Sunday", 3, "DLD", "Backlog: one topic + its problems", "backlog"),
+  gymBlock("Sunday"),
 
   // MONDAY — DataCom, Microprocessor, Calculus in class
   block("Monday", 1, "Data Communication", "Revise today's lecture", "review"),
   block("Monday", 2, "Microprocessor", "Revise today's lecture, prep for Tuesday's lab", "review"),
+  physioBlock("Monday"),
 
   // TUESDAY — only the Microprocessor lab, lightest uni day
   block("Tuesday", 1, "Microprocessor", "Write up the lab while it is fresh", "review"),
   block("Tuesday", 2, "DSA", "Problem solving before Wednesday's class", "practice"),
   block("Tuesday", 3, "Physics", "Backlog: clear one chapter section", "backlog"),
+  gymBlock("Tuesday"),
 
   // WEDNESDAY — DataCom, Microprocessor, DSA in class
   block("Wednesday", 1, "Data Communication", "Revise today's lecture", "review"),
   block("Wednesday", 2, "DSA", "Revise today's lecture, prep for Thursday's lab", "review"),
+  physioBlock("Wednesday"),
 
   // THURSDAY — 9:00 to 4:00 in class, keep the evening short
   block("Thursday", 1, "OOP", "Revise today's lecture", "review"),
   block("Thursday", 2, "Calculus", "Revise today's lecture, solve the exercise set", "review"),
+  gymBlock("Thursday"),
 
   // FRIDAY — no classes
   block("Friday", 1, "Physics", "Backlog: theory + problem set", "backlog"),
   block("Friday", 2, "EEE", "Backlog: circuits + problem set", "backlog"),
   block("Friday", 3, "DSA", "Problem solving", "practice"),
   roadmapBlock("Friday", "Your one roadmap day: long slot, go deep"),
+  physioBlock("Friday"),
 
   // SATURDAY — no classes
   block("Saturday", 1, "EEE", "Backlog: theory + problem set", "backlog"),
   block("Saturday", 2, "Calculus", "Problem sets, close the week's gaps", "practice"),
-  block("Saturday", 3, "DLD", "Backlog: theory + problem set", "backlog")
+  block("Saturday", 3, "DLD", "Backlog: theory + problem set", "backlog"),
+  physioBlock("Saturday")
 ];
+
+/** Blocks that count toward the study streak (the gym reminder does not). */
+export function isStudyBlock(t) {
+  return !!t && t.kind !== "gym";
+}
 
 /** Ids/subjects that only existed in older default schedules. Used to migrate saved data. */
 export function isLegacySchedule(schedule) {
@@ -146,7 +181,9 @@ export function isLegacySchedule(schedule) {
 export function needsMigration(schedule) {
   if (isLegacySchedule(schedule)) return true;
   // v5 default had a roadmap block every day; it now lives on Friday only
-  return schedule.some((t) => /^(sun|mon|tue|wed|thu|sat)-roadmap$/.test(t.id || ""));
+  if (schedule.some((t) => /^(sun|mon|tue|wed|thu|sat)-roadmap$/.test(t.id || ""))) return true;
+  // gym reminders and physio practice were added later
+  return !schedule.some((t) => /-(gym|physio)$/.test(t.id || ""));
 }
 
 /** Current default routine plus any blocks the user added themselves. */
